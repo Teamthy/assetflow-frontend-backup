@@ -1,0 +1,1 @@
+export { TreatmentBadge } from './StatusBadge'
