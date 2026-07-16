@@ -1,0 +1,242 @@
+'use client'
+
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { TrendingDown, Loader2, AlertTriangle } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter, DialogClose,
+} from '@/components/ui/dialog'
+import {
+  Form, FormControl, FormField, FormItem, FormLabel,
+  FormMessage, FormDescription,
+} from '@/components/ui/form'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { disposeAssetSchema, type DisposeAssetFormValues } from '@/lib/validations/asset'
+import { useDisposeAsset } from '@/lib/hooks/useAssets'
+import { formatCurrency } from '@/lib/utils/format'
+import type { Asset } from '@/types'
+
+interface Props {
+  asset: Asset
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+const APPROVAL_THRESHOLD = 500_000
+
+const DISPOSAL_METHODS = [
+  { value: 'sold',       label: 'Sold' },
+  { value: 'donated',    label: 'Donated' },
+  { value: 'scrapped',   label: 'Scrapped' },
+  { value: 'lost',       label: 'Lost' },
+  { value: 'written_off', label: 'Written Off' },
+  { value: 'other',      label: 'Other' },
+] as const
+
+export function DisposeAssetModal({ asset, open, onOpenChange }: Props) {
+  const disposeMutation = useDisposeAsset(asset.id)
+  const purchaseCost = asset.purchaseCost ?? 0
+  const requiresApproval = purchaseCost >= APPROVAL_THRESHOLD
+
+  const form = useForm<DisposeAssetFormValues>({
+    resolver: zodResolver(disposeAssetSchema),
+    defaultValues: {
+      method: 'sold',
+      reason: '',
+      proceeds: 0,
+      disposedAt: new Date().toISOString().split('T')[0],
+      approvedByUserId: '',
+      notes: '',
+    },
+  })
+
+  async function onSubmit(values: DisposeAssetFormValues) {
+    try {
+      await disposeMutation.mutateAsync({
+        method: values.method,
+        reason: values.reason,
+        proceeds: values.proceeds ?? 0,
+        disposedAt: values.disposedAt,
+        approvedByUserId: values.approvedByUserId?.trim() || undefined,
+        notes: values.notes?.trim() || undefined,
+      })
+      form.reset()
+      onOpenChange(false)
+    } catch {
+      // error handled by hook
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) form.reset()
+        onOpenChange(o)
+      }}
+    >
+      <DialogContent className="max-w-lg">
+        <DialogHeader className="px-6 pt-6 pb-0">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <TrendingDown className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <DialogTitle>Dispose asset</DialogTitle>
+              <DialogDescription>
+                Remove {asset.name} from the active register.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="px-6 py-3 border-b border-slate-100">
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800">
+              <p className="font-semibold">
+                This action permanently changes the asset status.
+              </p>
+              {requiresApproval && (
+                <p className="mt-1">
+                  Purchase cost of {formatCurrency(purchaseCost)} exceeds the{' '}
+                  {formatCurrency(APPROVAL_THRESHOLD)} approval threshold.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              <FormField
+                control={form.control}
+                name="method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Disposal method *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {DISPOSAL_METHODS.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason *</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Explain why this asset is being disposed..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="proceeds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Proceeds (₦)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Enter 0 if no proceeds were received.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="disposedAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Disposal date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Additional notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={2}
+                        placeholder="Optional notes..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <DialogClose asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={disposeMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={disposeMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {disposeMutation.isPending && (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                )}
+                Dispose Asset
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
