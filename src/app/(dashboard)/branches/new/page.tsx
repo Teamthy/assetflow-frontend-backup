@@ -1,0 +1,132 @@
+﻿'use client'
+import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { ArrowLeft } from 'lucide-react'
+import { branchApi } from '@/lib/api/branches'
+import { variants } from '@/lib/animations/tokens'
+import type { Branch } from '@/types'
+
+const schema = z.object({
+  name: z.string().min(2, 'Branch name must be at least 2 characters'),
+  code: z.string().optional(),
+  description: z.string().optional(),
+})
+
+type FormData = z.infer<typeof schema>
+
+export default function NewBranchPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  })
+
+  const onSubmit = async (data: FormData) => {
+    setIsLoading(true)
+    try {
+      const response = await branchApi.create(data)
+      const responseData = response.data as { data?: Branch } | Branch; const branch = (responseData && 'data' in responseData ? responseData.data : responseData) as Branch
+      toast.success('Branch created successfully')
+      router.push(`/branches/${branch.id}`)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err?.response?.data?.message ?? 'Failed to create branch')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="p-6 max-w-2xl">
+      <motion.div variants={variants.fadeUp} initial="hidden" animate="visible" className="mb-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Branches
+        </button>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Add Branch</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Create a new location for your organization</p>
+      </motion.div>
+
+      <motion.div
+        variants={variants.fadeUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+        className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-6"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Branch Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              {...register('name')}
+              placeholder="Lagos Head Office"
+              className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all"
+            />
+            {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Branch Code <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input
+              {...register('code')}
+              placeholder="LHO"
+              className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Description <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              {...register('description')}
+              placeholder="Brief description of this location"
+              rows={3}
+              className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10 transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <motion.button
+              type="submit"
+              disabled={isLoading}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-semibold text-sm rounded-xl transition-colors flex items-center gap-2"
+            >
+              {isLoading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                />
+              ) : null}
+              {isLoading ? 'Creating...' : 'Create Branch'}
+            </motion.button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
