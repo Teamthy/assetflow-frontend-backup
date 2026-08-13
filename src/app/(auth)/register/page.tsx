@@ -127,7 +127,7 @@ export default function RegisterPage() {
 
           <ApiStatusBanner />
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <form method="post" action="#" onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-full border border-[var(--border-default)] bg-[var(--neutral-50)] pl-5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z" fill="#6B7280" />

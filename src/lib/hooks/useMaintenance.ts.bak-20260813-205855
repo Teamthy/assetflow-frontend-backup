@@ -1,0 +1,97 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { maintenanceApi } from '@/lib/api/maintenance'
+import type {
+  MaintenanceListParams,
+  CreateMaintenanceDto,
+  UpdateMaintenanceDto,
+  CompleteMaintenanceDto,
+} from '@/lib/api/maintenance'
+import { toast } from 'sonner'
+
+export const maintenanceKeys = {
+  all: ['maintenance'] as const,
+  lists: () => [...maintenanceKeys.all, 'list'] as const,
+  list: (params: MaintenanceListParams) => [...maintenanceKeys.lists(), params] as const,
+  details: () => [...maintenanceKeys.all, 'detail'] as const,
+  detail: (id: string) => [...maintenanceKeys.details(), id] as const,
+}
+
+interface ApiErr { response?: { data?: { message?: string } }; message?: string }
+const msg = (e: unknown, fb: string) => ((e as ApiErr)?.response?.data?.message ?? (e as ApiErr)?.message ?? fb)
+
+export function useMaintenanceTasks(params: MaintenanceListParams = {}) {
+  return useQuery({
+    queryKey: maintenanceKeys.list(params),
+    queryFn: () => maintenanceApi.list(params),
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useMaintenanceTask(id: string) {
+  return useQuery({
+    queryKey: maintenanceKeys.detail(id),
+    queryFn: () => maintenanceApi.get(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useCreateMaintenance() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateMaintenanceDto) => maintenanceApi.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: maintenanceKeys.lists() }); toast.success('Task created') },
+    onError: (e) => toast.error(msg(e, 'Failed to create task')),
+  })
+}
+
+export function useUpdateMaintenance(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateMaintenanceDto) => maintenanceApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: maintenanceKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: maintenanceKeys.lists() })
+      toast.success('Task updated')
+    },
+    onError: (e) => toast.error(msg(e, 'Failed to update task')),
+  })
+}
+
+export function useCompleteMaintenance(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CompleteMaintenanceDto) => maintenanceApi.complete(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: maintenanceKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: maintenanceKeys.lists() })
+      toast.success('Task marked complete')
+    },
+    onError: (e) => toast.error(msg(e, 'Failed to complete task')),
+  })
+}
+
+export function useStartMaintenance(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => maintenanceApi.start(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: maintenanceKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: maintenanceKeys.lists() })
+      toast.success('Task started')
+    },
+    onError: (e) => toast.error(msg(e, 'Failed to start task')),
+  })
+}
+
+export function useCancelMaintenance(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => maintenanceApi.cancel(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: maintenanceKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: maintenanceKeys.lists() })
+      toast.success('Task cancelled')
+    },
+    onError: (e) => toast.error(msg(e, 'Failed to cancel task')),
+  })
+}

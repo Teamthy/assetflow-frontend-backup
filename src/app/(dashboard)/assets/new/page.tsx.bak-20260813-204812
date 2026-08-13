@@ -1,0 +1,444 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowLeft, Loader2, Package, MapPin, DollarSign, Settings2 } from 'lucide-react'
+
+import { PageHeader } from '@/components/shared/PageHeader'
+import { RecognitionPreview } from '@/components/assets/RecognitionPreview'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
+} from '@/components/ui/form'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { createAssetSchema, type CreateAssetFormValues } from '@/lib/validations/asset'
+import { useCreateAsset } from '@/lib/hooks/useAssets'
+import { useBranches } from '@/lib/hooks/useBranches'
+import { usersApi } from '@/lib/api/users'
+import { useQuery } from '@tanstack/react-query'
+import type { CreateAssetDto, AssetStatus, AssetCondition } from '@/types'
+
+export default function CreateAssetPage() {
+  const router = useRouter()
+  const createAsset = useCreateAsset()
+  const { data: branchResp, isLoading: loadingBranches } = useBranches()
+  const branches = branchResp?.data ?? branchResp?.items ?? []
+  const { data: members = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['users', 'picker'],
+    queryFn: usersApi.list,
+  })
+
+  const form = useForm<CreateAssetFormValues>({
+    resolver: zodResolver(createAssetSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      assetTag: '',
+      serialNumber: '',
+      category: '',
+      manufacturer: '',
+      model: '',
+      branchId: '',
+      assignedTo: '',
+      status: 'active',
+      condition: 'good',
+      hasFutureEconomicBenefit: true,
+      costCanBeReliablyMeasured: true,
+    },
+  })
+
+  const watchedValues = form.watch()
+
+  async function onSubmit(values: CreateAssetFormValues) {
+    const payload: CreateAssetDto = {
+      name: values.name,
+      assetTag: values.assetTag,
+      status: values.status as AssetStatus,
+      condition: values.condition as AssetCondition,
+    }
+
+    if (values.description?.trim()) payload.description = values.description
+    if (values.serialNumber?.trim()) payload.serialNumber = values.serialNumber
+    if (values.category?.trim()) payload.category = values.category
+    if (values.manufacturer?.trim()) payload.manufacturer = values.manufacturer
+    if (values.model?.trim()) payload.model = values.model
+    if (values.branchId?.trim()) payload.branchId = values.branchId
+    if (values.assignedTo?.trim()) payload.assignedTo = values.assignedTo
+    if (values.purchaseCost !== undefined) payload.purchaseCost = values.purchaseCost
+    if (values.purchaseDate?.trim()) payload.purchaseDate = values.purchaseDate
+    if (values.warrantyExpiryDate?.trim()) payload.warrantyExpiryDate = values.warrantyExpiryDate
+    if (values.expectedUsefulLifeMonths !== undefined && values.expectedUsefulLifeMonths > 0) {
+      payload.expectedUsefulLifeMonths = values.expectedUsefulLifeMonths
+    }
+    if (values.residualValue !== undefined) payload.residualValue = values.residualValue
+    if (values.hasFutureEconomicBenefit !== undefined) payload.hasFutureEconomicBenefit = values.hasFutureEconomicBenefit
+    if (values.costCanBeReliablyMeasured !== undefined) payload.costCanBeReliablyMeasured = values.costCanBeReliablyMeasured
+
+    try {
+      const created = await createAsset.mutateAsync(payload)
+      router.push('/assets/' + created.id)
+    } catch {
+      // toast handled in hook
+    }
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      <Link href="/assets" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 mb-4">
+        <ArrowLeft className="w-4 h-4" />
+        Back to assets
+      </Link>
+
+      <PageHeader
+        title="Add asset"
+        description="Register a new asset in your organization's fixed asset register"
+      />
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Section 1: Basic Info */}
+            <FormSection icon={Package} title="Basic information" description="Identify the asset in your register">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Asset name <span className="text-red-500">*</span></FormLabel>
+                    <FormControl><Input placeholder="e.g. Dell Latitude 5540" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="assetTag" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Asset tag <span className="text-red-500">*</span></FormLabel>
+                    <FormControl><Input placeholder="e.g. AST-00142" {...field} /></FormControl>
+                    <FormDescription>Unique tag for this asset</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="serialNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Serial number</FormLabel>
+                    <FormControl><Input placeholder="Manufacturer serial" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="category" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl><Input placeholder="e.g. Laptop, Vehicle, Furniture" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="manufacturer" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Manufacturer</FormLabel>
+                    <FormControl><Input placeholder="e.g. Dell" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="model" render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Model</FormLabel>
+                    <FormControl><Input placeholder="e.g. Latitude 5540" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Additional details about this asset" rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </FormSection>
+
+            {/* Section 2: Location & Assignment */}
+            <FormSection icon={MapPin} title="Location and assignment" description="Where is this asset and who owns it">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="branchId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingBranches ? 'Loading branches...' : 'Select branch'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(!branches || branches.length === 0) ? (
+                          <div className="px-3 py-2 text-sm text-slate-400">
+                            No branches yet. <Link href="/branches" className="text-blue-600 hover:underline">Create one</Link>
+                          </div>
+                        ) : branches.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="assignedTo" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned to</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUsers ? 'Loading people...' : 'Unassigned'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            {member.fullName ?? `${member.firstName} ${member.lastName}`.trim()} ({member.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Optional custodian for this asset</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="status" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status <span className="text-red-500">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="condition" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Condition <span className="text-red-500">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </FormSection>
+
+            {/* Section 3: Financial */}
+            <FormSection icon={DollarSign} title="Financial information" description="Cost, dates, and depreciation">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="purchaseCost" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Purchase cost</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">â‚¦</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="pl-7"
+                          placeholder="0.00"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="residualValue" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Residual value</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">â‚¦</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="pl-7"
+                          placeholder="0.00"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="purchaseDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Purchase date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="warrantyExpiryDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warranty expiry</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="expectedUsefulLifeMonths" render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Expected useful life</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          placeholder="e.g. 48"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">months</span>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Used for depreciation. Below 12 months means expensed rather than capitalized.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </FormSection>
+
+            {/* Section 4: Recognition Criteria */}
+            <FormSection icon={Settings2} title="Recognition criteria" description="Determines if this asset is capitalized">
+              <div className="space-y-4">
+                <FormField control={form.control} name="hasFutureEconomicBenefit" render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+                    <div>
+                      <FormLabel className="text-sm font-medium text-slate-900">Has future economic benefit</FormLabel>
+                      <FormDescription className="mt-0.5">
+                        Will this asset generate value in future periods?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="costCanBeReliablyMeasured" render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+                    <div>
+                      <FormLabel className="text-sm font-medium text-slate-900">Cost can be reliably measured</FormLabel>
+                      <FormDescription className="mt-0.5">
+                        Do you have supporting documentation for the cost?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </FormSection>
+          </div>
+
+          {/* Right column: Recognition preview + submit */}
+          <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <RecognitionPreview
+              input={{
+                purchaseCost: watchedValues.purchaseCost,
+                expectedUsefulLifeMonths: watchedValues.expectedUsefulLifeMonths,
+                hasFutureEconomicBenefit: watchedValues.hasFutureEconomicBenefit,
+                costCanBeReliablyMeasured: watchedValues.costCanBeReliablyMeasured,
+              }}
+            />
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+              <Button
+                type="submit"
+                disabled={createAsset.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11"
+              >
+                {createAsset.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating asset...
+                  </>
+                ) : 'Create asset'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push('/assets')}
+                disabled={createAsset.isPending}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Form>
+    </div>
+  )
+}
+
+function FormSection({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ElementType
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+            <Icon className="w-4 h-4 text-slate-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            <p className="text-sm text-slate-500 mt-0.5">{description}</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  )
+}
+

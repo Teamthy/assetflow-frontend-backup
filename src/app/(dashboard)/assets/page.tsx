@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Upload, Download, Search, Filter, X, Package,
   ChevronLeft, ChevronRight, MoreHorizontal, ArrowUpDown,
-  Eye, Edit, ArrowLeftRight, Trash2,
+  Eye, Edit, ArrowLeftRight, Trash2, Copy, QrCode,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -29,8 +29,10 @@ import {
 import { useAssets, useDeleteAsset } from '@/lib/hooks/useAssets'
 import { useBranches } from '@/lib/hooks/useBranches'
 import { assetApi } from '@/lib/api/assets'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
-import type { Asset, AssetStatus, AssetCondition } from '@/types'
+import { formatCurrency } from '@/lib/utils/format'
+import { downloadBlob, downloadTextFile, toCsv } from '@/lib/utils/download'
+import { Checkbox } from '@/components/ui/checkbox'
+import type { Asset, AssetStatus, AssetCondition, AccountingTreatment } from '@/types'
 
 export default function AssetsPage() {
   const router = useRouter()
@@ -42,8 +44,11 @@ export default function AssetsPage() {
   const [pageSize, setPageSize] = useState(25)
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [treatmentFilter, setTreatmentFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null)
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
 
   const { data: branchResp } = useBranches()
   const branches = branchResp?.data ?? branchResp?.items ?? []
@@ -54,10 +59,12 @@ export default function AssetsPage() {
     search: search || undefined,
     status: statusFilter !== 'all' ? (statusFilter as AssetStatus) : undefined,
     condition: conditionFilter !== 'all' ? (conditionFilter as AssetCondition) : undefined,
+    category: categoryFilter.trim() || undefined,
+    accountingTreatment: treatmentFilter !== 'all' ? (treatmentFilter as AccountingTreatment) : undefined,
     branchId: branchFilter !== 'all' ? branchFilter : undefined,
     sortBy,
     sortOrder,
-  }), [page, pageSize, search, statusFilter, conditionFilter, branchFilter, sortBy, sortOrder])
+  }), [page, pageSize, search, statusFilter, conditionFilter, branchFilter, treatmentFilter, categoryFilter, sortBy, sortOrder])
 
   const { data, isLoading, isFetching, error } = useAssets(params)
   const deleteAsset = useDeleteAsset()
@@ -65,13 +72,23 @@ export default function AssetsPage() {
   const assets = data?.data ?? data?.items ?? []
   const total = data?.pagination?.total ?? 0
   const totalPages = data?.pagination?.totalPages ?? 1
-  const hasActiveFilters = statusFilter !== 'all' || conditionFilter !== 'all' || branchFilter !== 'all' || search !== ''
+  const selectedIds = Object.keys(selected).filter((id) => selected[id])
+  const allVisibleSelected = assets.length > 0 && assets.every((asset) => selected[asset.id])
+  const hasActiveFilters =
+    statusFilter !== 'all' ||
+    conditionFilter !== 'all' ||
+    branchFilter !== 'all' ||
+    treatmentFilter !== 'all' ||
+    categoryFilter.trim() !== '' ||
+    search !== ''
 
   function clearFilters() {
     setSearch('')
     setStatusFilter('all')
     setConditionFilter('all')
     setBranchFilter('all')
+    setTreatmentFilter('all')
+    setCategoryFilter('')
     setPage(1)
   }
 
@@ -87,18 +104,32 @@ export default function AssetsPage() {
   async function handleExport() {
     try {
       const blob = await assetApi.export(params)
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'assets-' + new Date().toISOString().split('T')[0] + '.xlsx'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
+      downloadBlob(blob, 'assets-' + new Date().toISOString().split('T')[0] + '.xlsx')
       toast.success('Export downloaded')
     } catch {
       toast.error('Export failed')
     }
+  }
+
+  function exportSelectedCsv() {
+    const rows = assets
+      .filter((asset) => selected[asset.id])
+      .map((asset) => ({
+        name: asset.name,
+        assetTag: asset.assetTag,
+        status: asset.status,
+        condition: asset.condition,
+        category: asset.category ?? '',
+        branch: asset.branch?.name ?? '',
+        purchaseCost: asset.purchaseCost ?? '',
+        treatment: asset.accountingTreatment ?? '',
+      }))
+    if (rows.length === 0) {
+      toast.error('Select at least one asset')
+      return
+    }
+    downloadTextFile(toCsv(rows), `assets-selected-${new Date().toISOString().slice(0, 10)}.csv`)
+    toast.success(`${rows.length} selected assets exported`)
   }
 
   async function handleDelete() {
@@ -118,9 +149,9 @@ export default function AssetsPage() {
         actions={
           <div className="flex gap-2">
             <RoleGuard permission="assets.export">
-              <Button variant="outline" onClick={handleExport} disabled={assets.length === 0}>
+              <Button variant="outline" onClick={selectedIds.length ? exportSelectedCsv : handleExport} disabled={assets.length === 0}>
                 <Download className="w-4 h-4" />
-                Export
+                {selectedIds.length ? `Export ${selectedIds.length}` : 'Export'}
               </Button>
             </RoleGuard>
             <RoleGuard permission="assets.import">
@@ -164,7 +195,7 @@ export default function AssetsPage() {
               Filters
               {hasActiveFilters && (
                 <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
-                  {[statusFilter !== 'all', conditionFilter !== 'all', branchFilter !== 'all'].filter(Boolean).length + (search ? 1 : 0)}
+                  {[statusFilter !== 'all', conditionFilter !== 'all', branchFilter !== 'all', treatmentFilter !== 'all', Boolean(categoryFilter.trim())].filter(Boolean).length + (search ? 1 : 0)}
                 </span>
               )}
             </Button>
@@ -233,6 +264,30 @@ export default function AssetsPage() {
                   </Select>
                 </div>
               )}
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">Treatment</label>
+                <Select value={treatmentFilter} onValueChange={(v) => { setTreatmentFilter(v); setPage(1) }}>
+                  <SelectTrigger className="w-48 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All treatments</SelectItem>
+                    <SelectItem value="capitalized">Capitalized</SelectItem>
+                    <SelectItem value="expensed">Expensed</SelectItem>
+                    <SelectItem value="tracked_non_capitalized">Tracked</SelectItem>
+                    <SelectItem value="pending_review">Pending review</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">Category</label>
+                <input
+                  value={categoryFilter}
+                  onChange={(e) => { setCategoryFilter(e.target.value); setPage(1) }}
+                  placeholder="e.g. Laptop"
+                  className="h-9 w-40 rounded-lg border border-slate-200 px-3 text-sm"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -283,6 +338,17 @@ export default function AssetsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
+                    <th className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={(checked) => {
+                          const next: Record<string, boolean> = { ...selected }
+                          assets.forEach((asset) => { next[asset.id] = Boolean(checked) })
+                          setSelected(next)
+                        }}
+                        aria-label="Select page"
+                      />
+                    </th>
                     <SortableHeader label="Asset" column="name" sortBy={sortBy} sortOrder={sortOrder} onToggle={toggleSort} />
                     <SortableHeader label="Tag" column="assetTag" sortBy={sortBy} sortOrder={sortOrder} onToggle={toggleSort} />
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Status</th>
@@ -301,6 +367,13 @@ export default function AssetsPage() {
                       onClick={() => router.push('/assets/' + asset.id)}
                       className="hover:bg-slate-50/70 transition-colors duration-100 group cursor-pointer"
                     >
+                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={Boolean(selected[asset.id])}
+                          onCheckedChange={(checked) => setSelected((prev) => ({ ...prev, [asset.id]: Boolean(checked) }))}
+                          aria-label={`Select ${asset.assetTag}`}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">

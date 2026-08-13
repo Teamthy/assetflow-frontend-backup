@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useImportAssets } from '@/lib/hooks/useAssets'
+import { assetApi } from '@/lib/api/assets'
 import { formatFileSize } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 
@@ -40,6 +41,14 @@ export default function ImportAssetsPage() {
   const [fileError, setFileError] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
+  const [history, setHistory] = useState<Array<{ at: string; file: string; inserted: number; failed: number }>>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      return JSON.parse(window.localStorage.getItem('assetflow-import-history') ?? '[]') as Array<{ at: string; file: string; inserted: number; failed: number }>
+    } catch {
+      return []
+    }
+  })
   const isOnboardingFlow = searchParams.get('from') === 'onboarding'
 
   function validateFile(f: File): boolean {
@@ -52,8 +61,8 @@ export default function ImportAssetsPage() {
       f.type === 'application/vnd.ms-excel' ||
       f.type === 'text/csv'
 
-    if (!isSpreadsheet) {
-      setFileError('Only .xlsx, .xls, or .csv files are supported')
+    if (!f.name.endsWith('.xlsx') && f.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      setFileError('The API accepts official .xlsx only. Download the template — CSV and .xls are rejected.')
       return false
     }
 
@@ -114,6 +123,15 @@ export default function ImportAssetsPage() {
       }
 
       setResult(normalized)
+      const entry = {
+        at: new Date().toISOString(),
+        file: file.name,
+        inserted: normalized.inserted ?? 0,
+        failed: normalized.failed ?? 0,
+      }
+      const nextHistory = [entry, ...history].slice(0, 8)
+      setHistory(nextHistory)
+      window.localStorage.setItem('assetflow-import-history', JSON.stringify(nextHistory))
       setStep('results')
       toast.success((normalized.inserted ?? 0) + ' assets imported')
     } catch {
@@ -130,49 +148,21 @@ export default function ImportAssetsPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  function downloadTemplate() {
-    // Generate a CSV template client-side with corrected schema
-    const headers = [
-      'name',
-      'assetTag',
-      'serialNumber',
-      'purchaseCost',
-      'purchaseDate',
-      'status',
-      'condition',
-      'expectedUsefulLifeMonths',
-      'residualValue',
-      'branchId',
-      'assignedTo',
-      'hasFutureEconomicBenefit',
-      'costCanBeReliablyMeasured',
-    ]
-    const example = [
-      'Dell Latitude 5540',
-      'AST-00001',
-      'DL5540-2024-001',
-      '450000',
-      '2024-03-15',
-      'active',
-      'good',
-      '48',
-      '50000',
-      '',
-      '',
-      'true',
-      'true',
-    ]
-    const csv = headers.join(',') + '\n' + example.join(',') + '\n'
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'assetflow-import-template.csv'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast.success('Template downloaded')
+  async function downloadTemplate() {
+    try {
+      const blob = await assetApi.downloadTemplate()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'asset-import-template.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Template downloaded')
+    } catch {
+      toast.error('Could not download the official .xlsx template')
+    }
   }
 
   return (
@@ -284,7 +274,7 @@ export default function ImportAssetsPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -298,7 +288,7 @@ export default function ImportAssetsPage() {
                 {dragActive ? 'Drop your file here' : 'Drop file here or click to browse'}
               </p>
               <p className="text-sm text-slate-500 mt-1.5">
-                .xlsx or .xls, up to {MAX_FILE_SIZE_MB}MB
+                Official .xlsx template only, up to {MAX_FILE_SIZE_MB}MB
               </p>
             </div>
 

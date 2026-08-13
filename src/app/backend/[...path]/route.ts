@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const TARGET = (process.env.API_PROXY_TARGET || 'http://127.0.0.1:6000').replace(
+const TARGET = (process.env.API_PROXY_TARGET || 'http://127.0.0.1:7000').replace(
   /\/$/,
   '',
 )

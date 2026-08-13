@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:6000/api'
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:7000/api'
 
 test.describe('auth API contract', () => {
   test('health is up', async ({ request }) => {
