@@ -24,23 +24,12 @@ import { useAuthStore } from '@/lib/stores/auth'
 import { authApi } from '@/lib/api/auth'
 import { formatDate, formatDateTime } from '@/lib/utils/format'
 import type { UserRole } from '@/types'
+import { roleLabel as formatRoleLabel } from '@/lib/utils/roles'
 
-const roleLabels: Record<UserRole, string> = {
-  primary_admin: 'Primary Admin',
-  org_admin: 'Organization Admin',
-  asset_manager: 'Asset Manager',
-  finance_user: 'Finance User',
-  branch_manager: 'Branch Manager',
-  maintenance_staff: 'Maintenance Staff',
-  auditor: 'Auditor',
-  standard_staff: 'Standard Staff',
-}
-
-const roleColors: Record<UserRole, string> = {
-  primary_admin: 'bg-purple-50 text-purple-700 border-purple-200',
-  org_admin: 'bg-purple-50 text-purple-700 border-purple-200',
+const roleColors: Record<string, string> = {
+  admin: 'bg-purple-50 text-purple-700 border-purple-200',
   asset_manager: 'bg-blue-50 text-blue-700 border-blue-200',
-  finance_user: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  finance: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   branch_manager: 'bg-orange-50 text-orange-700 border-orange-200',
   maintenance_staff: 'bg-amber-50 text-amber-700 border-amber-200',
   auditor: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -128,7 +117,7 @@ export default function ProfilePage() {
     }
   }
 
-  const roleLabel = role ? roleLabels[role] : 'Member'
+  const roleLabel = role ? formatRoleLabel(role) : 'Member'
   const roleColorClass = role ? roleColors[role] : 'bg-slate-50 text-slate-600 border-slate-200'
 
   return (

@@ -16,12 +16,14 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { useAssets } from '@/lib/hooks/useAssets'
 import { assetApi } from '@/lib/api/assets'
+import { reportsApi } from '@/lib/api/reports'
 import { formatCurrency, formatNumber } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 
 export default function FinanceReportPage() {
   const { data: allAssets, isLoading } = useAssets({ limit: 1000 })
   const { data: disposedAssets } = useAssets({ status: 'disposed', limit: 1000 })
+  const { data: financeReport } = useQuery({ queryKey: ['reports', 'finance'], queryFn: reportsApi.finance })
 
   const stats = useMemo(() => {
     const items = allAssets?.data ?? allAssets?.items ?? []
@@ -33,7 +35,9 @@ export default function FinanceReportPage() {
     const totalAssetValue = items.reduce((sum, a) => sum + (a.purchaseCost ?? 0), 0)
     const residualTotal = items.reduce((sum, a) => sum + (a.residualValue ?? 0), 0)
 
-    const disposalProceeds = 0 // Would come from disposal records; placeholder
+    const disposalProceeds = Number(
+      (financeReport as { disposals?: { totalProceeds?: string } } | undefined)?.disposals?.totalProceeds ?? 0
+    )
 
     // Group by category
     const categoryBreakdown: Record<string, { count: number; value: number }> = {}

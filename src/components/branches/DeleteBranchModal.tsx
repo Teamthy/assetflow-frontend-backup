@@ -24,7 +24,7 @@ export function DeleteBranchModal({ branch, open, onOpenChange }: DeleteBranchMo
   const [forceDelete, setForceDelete] = useState(false)
 
   const hasAssets = (branch.assetCount ?? 0) > 0
-  const isAdmin = role === 'primary_admin' || role === 'org_admin'
+  const isAdmin = role === 'admin'
   const canForceDelete = hasAssets && isAdmin
 
   async function handleDelete() {

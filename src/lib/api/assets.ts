@@ -1,4 +1,4 @@
-﻿import apiClient from './client'
+import apiClient from './client'
 import type {
   Asset,
   CreateAssetDto,
@@ -94,6 +94,23 @@ export const assetApi = {
       responseType: 'blob',
     })
     return response.data as Blob
+  },
+
+  downloadTemplate: async () => {
+    const response = await apiClient.get('/assets/import/template', {
+      responseType: 'blob',
+    })
+    return response.data as Blob
+  },
+
+  qr: async (id: string) => {
+    const response = await apiClient.get<{ success: boolean; data: unknown }>(`/assets/${id}/qr`)
+    return response.data.data
+  },
+
+  scan: async (id: string) => {
+    const response = await apiClient.get<{ success: boolean; data: unknown }>(`/assets/${id}/scan`)
+    return response.data.data
   },
 
   import: (file: File) => {

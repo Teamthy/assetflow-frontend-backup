@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/stores/auth'
 export default function PlanLimitPage() {
   const router = useRouter()
   const role = useAuthStore((s) => s.role)
-  const isAdmin = role === 'primary_admin' || role === 'org_admin'
+  const isAdmin = role === 'admin'
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">

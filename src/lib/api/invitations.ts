@@ -15,9 +15,10 @@ export interface Invitation {
 
 export interface InviteUserDto {
   email: string
-  firstName: string
-  lastName: string
+  firstName?: string
+  lastName?: string
   roleId?: string
+  role?: string
 }
 
 export interface AcceptInvitationDto {

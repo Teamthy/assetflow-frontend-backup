@@ -58,7 +58,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const { role } = usePermission()
 
-  const isAdmin = role === 'primary_admin' || role === 'org_admin'
+  const isAdmin = role === 'admin'
   const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin)
 
   return (

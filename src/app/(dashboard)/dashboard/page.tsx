@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -16,10 +16,9 @@ import Link from 'next/link'
 import type { UserRole } from '@/types'
 
 const dashboardMap: Record<UserRole, React.ComponentType> = {
-  primary_admin: AdminDashboard,
-  org_admin: AdminDashboard,
+  admin: AdminDashboard,
   asset_manager: AssetManagerDashboard,
-  finance_user: FinanceDashboard,
+  finance: FinanceDashboard,
   branch_manager: BranchManagerDashboard,
   maintenance_staff: MaintenanceDashboard,
   auditor: AuditorDashboard,
@@ -81,7 +80,7 @@ function WelcomeBanner({ orgName, onDismiss, role, source }: { orgName: string; 
       },
     ]
 
-  const roleLabel = role === 'standard_staff' ? 'Staff member' : role === 'primary_admin' ? 'Primary Admin' : role === 'org_admin' ? 'Organization Admin' : 'Team member'
+  const roleLabel = role === 'standard_staff' ? 'Staff member' : role === 'admin' ? 'Admin' : 'Team member'
 
   return (
     <div className="mb-6 bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-6 text-white relative overflow-hidden animate-fade-in">

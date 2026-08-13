@@ -1,4 +1,4 @@
-﻿import apiClient from './client'
+import apiClient from './client'
 
 export const authApi = {
   register: (data: {
@@ -42,4 +42,6 @@ export const authApi = {
 
   verifyPassword: (password: string) =>
     apiClient.post('/auth/verify-password', { password }),
+
+  me: () => apiClient.get('/auth/me'),
 }

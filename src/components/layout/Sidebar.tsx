@@ -34,23 +34,23 @@ const navSections: NavSection[] = [
   {
     label: 'Operations',
     items: [
-      { label: 'Assets', href: '/assets', icon: Package, roles: ['primary_admin', 'org_admin', 'asset_manager', 'finance_user', 'branch_manager', 'auditor', 'standard_staff'] },
-      { label: 'Branches', href: '/branches', icon: Building2, roles: ['primary_admin', 'org_admin', 'asset_manager', 'finance_user', 'branch_manager', 'auditor'] },
-      { label: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['primary_admin', 'org_admin', 'asset_manager', 'branch_manager', 'maintenance_staff'] },
+      { label: 'Assets', href: '/assets', icon: Package, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor', 'standard_staff'] },
+      { label: 'Branches', href: '/branches', icon: Building2, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor'] },
+      { label: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['admin', 'asset_manager', 'branch_manager', 'maintenance_staff'] },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { label: 'Reports', href: '/reports', icon: BarChart3, roles: ['primary_admin', 'org_admin', 'asset_manager', 'finance_user', 'branch_manager', 'auditor'] },
-      { label: 'Approvals', href: '/approvals', icon: ShieldCheck, roles: ['primary_admin', 'org_admin', 'finance_user', 'asset_manager', 'branch_manager'] },
+      { label: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor'] },
+      { label: 'Approvals', href: '/approvals', icon: ShieldCheck, roles: ['admin', 'finance', 'asset_manager', 'branch_manager'] },
     ],
   },
   {
     label: 'Account',
     items: [
       { label: 'Notifications', href: '/notifications', icon: Bell, roles: 'all' },
-      { label: 'Settings', href: '/settings', icon: Settings, roles: ['primary_admin', 'org_admin'] },
+      { label: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
     ],
   },
 ]

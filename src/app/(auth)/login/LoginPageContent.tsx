@@ -9,9 +9,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
-import { settingsApi } from '@/lib/api/settings'
 import { useAuthStore } from '@/lib/stores/auth'
-import type { UserRole, ApiError } from '@/types'
+import { normalizeRole } from '@/lib/utils/roles'
+import type { ApiError } from '@/types'
 
 const loginSchema = z.object({
     email: z.string().email('Enter a valid email address'),
@@ -60,7 +60,7 @@ export default function LoginPageContent() {
 
             const refreshToken = responseData?.refreshToken ?? ''
 
-            let role: UserRole = responseData?.member?.role ?? responseData?.role ?? 'primary_admin'
+            const role = normalizeRole(responseData?.role ?? responseData?.member?.role, 'standard_staff')
 
             const userWithFullName = {
                 ...user,
@@ -75,36 +75,9 @@ export default function LoginPageContent() {
                 role,
             })
 
-            if (!responseData?.member?.role && !responseData?.role) {
-                try {
-                    const membersResponse = await settingsApi.getTeamMembers()
-                    const members = membersResponse.data?.data ?? []
-                    const currentMember = Array.isArray(members)
-                        ? members.find((m: any) => m.email === user.email || m.userId === user.id)
-                        : null
-
-                    if (currentMember?.role) {
-                        role = currentMember.role as UserRole
-                        setAuth({
-                            user: userWithFullName,
-                            organization,
-                            accessToken,
-                            refreshToken,
-                            role,
-                        })
-                    }
-                } catch (memberError) {
-                    console.warn('[Login] Failed to fetch member role, using default:', memberError)
-                }
-            }
-
             const firstName = user.firstName ?? 'there'
             toast.success(`Welcome back, ${firstName}!`)
-            if (role === 'primary_admin' || role === 'org_admin') {
-                router.push('/dashboard?welcome=true')
-            } else {
-                router.push('/dashboard')
-            }
+            router.push(role === 'admin' ? '/dashboard?welcome=true' : '/dashboard')
         } catch (error: unknown) {
             const err = error as ApiError
             console.error('[Login] Error:', error)

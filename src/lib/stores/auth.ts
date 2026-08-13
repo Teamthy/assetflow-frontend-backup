@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { User, Organization, UserRole } from "@/types"
+import { normalizeRole } from "@/lib/utils/roles"
 
 function setCookie(name: string, value: string, maxAgeSeconds: number) {
   if (typeof window === 'undefined') return
@@ -39,7 +40,7 @@ export interface AuthState {
 }
 
 function inferRole(_user: User | null): UserRole | null {
-  return "primary_admin" as UserRole
+  return null
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -60,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
           organization: data.organization,
           accessToken: data.accessToken,
           refreshToken: data.refreshToken ?? null,
-          role: data.role ?? inferRole(data.user),
+          role: data.role ? normalizeRole(data.role) : inferRole(data.user),
           isAuthenticated: true,
           isFirstLogin: data.isFirstLogin ?? false,
           hasHydrated: true,
@@ -129,6 +130,7 @@ export const useAuthStore = create<AuthState>()(
         return {
           ...currentState,
           ...state,
+          role: state.role ? normalizeRole(state.role) : null,
           isAuthenticated: Boolean(state.accessToken || state.isAuthenticated),
           hasHydrated: true,
         } as AuthState

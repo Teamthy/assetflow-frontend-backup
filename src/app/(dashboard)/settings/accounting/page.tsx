@@ -21,7 +21,7 @@ const policySchema = z.object({
   capitalizationThreshold: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Must be a valid amount'),
   capitalizationCurrency: z.enum(['NGN', 'USD', 'EUR', 'GBP', 'KES', 'ZAR', 'GHS']),
   minimumUsefulLifeMonths: z.coerce.number().int().min(1).max(600),
-  lowValueTreatment: z.enum(['tracked_non_capitalized', 'expensed']),
+  lowValueTreatment: z.enum(['track_non_capitalized', 'expense']),
   defaultDepreciationMethod: z.enum(['straight_line', 'reducing_balance']),
   defaultUsefulLifeYears: z.coerce.number().int().min(1).max(100).nullable(),
 })
@@ -38,7 +38,7 @@ export default function AccountingSettingsPage() {
       capitalizationThreshold: '50000.00',
       capitalizationCurrency: 'NGN',
       minimumUsefulLifeMonths: 12,
-      lowValueTreatment: 'tracked_non_capitalized',
+      lowValueTreatment: 'track_non_capitalized',
       defaultDepreciationMethod: 'straight_line',
       defaultUsefulLifeYears: 5,
     },
@@ -154,8 +154,8 @@ export default function AccountingSettingsPage() {
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="tracked_non_capitalized">Track as non-capitalized</SelectItem>
-                    <SelectItem value="expensed">Expense immediately</SelectItem>
+                    <SelectItem value="track_non_capitalized">Track as non-capitalized</SelectItem>
+                    <SelectItem value="expense">Expense immediately</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormDescription>Assets below threshold</FormDescription>

@@ -16,7 +16,7 @@ import { maintenanceKeys } from '@/lib/hooks/useMaintenance'
 import { toast } from 'sonner'
 import { UserAvatar } from '@/components/shared/UserAvatar'
 
-const ELIGIBLE_ROLES = ['org_admin', 'asset_manager', 'branch_manager', 'maintenance_staff']
+const ELIGIBLE_ROLES = ['admin', 'asset_manager', 'branch_manager', 'maintenance_staff']
 
 const schema = z.object({
   assignedUserId: z.string().min(1, 'Please select a team member'),
