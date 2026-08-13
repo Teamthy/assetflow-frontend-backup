@@ -1,3 +1,4 @@
+import { isRbacEnforced } from '@/lib/access'
 import { useAuthStore } from '@/lib/stores/auth'
 import { normalizeRole } from '@/lib/utils/roles'
 import type { UserRole } from '@/types'
@@ -54,6 +55,7 @@ const permissionMatrix: Record<Permission, UserRole[]> = {
 }
 
 export function can(role: UserRole, permission: Permission): boolean {
+  if (!isRbacEnforced()) return true
   return permissionMatrix[permission]?.includes(normalizeRole(role)) ?? false
 }
 

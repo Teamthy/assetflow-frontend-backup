@@ -6,6 +6,7 @@ import {
   Building2, Landmark, Users, CreditCard, Bell, Shield,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { isRbacEnforced } from '@/lib/access'
 import { usePermission } from '@/lib/utils/permissions'
 import { cn } from '@/lib/utils'
 
@@ -58,7 +59,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const pathname = usePathname()
   const { role } = usePermission()
 
-  const isAdmin = role === 'admin'
+  const isAdmin = !isRbacEnforced() || role === 'admin'
   const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin)
 
   return (

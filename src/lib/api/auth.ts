@@ -33,7 +33,12 @@ export const authApi = {
     email: string
     otp: string
     newPassword: string
-  }) => apiClient.post('/auth/password-reset/confirm', data),
+  }) =>
+    apiClient.post('/auth/password-reset/confirm', {
+      token: data.otp,
+      otp: data.otp,
+      newPassword: data.newPassword,
+    }),
 
   changePassword: (data: {
     currentPassword: string

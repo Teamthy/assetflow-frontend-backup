@@ -10,8 +10,8 @@ import {
 import { X, Loader2, UserCheck } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { maintenanceApi } from '@/lib/api/maintenance'
-import { teamApi } from '@/lib/api/team'
-import type { TeamMember } from '@/lib/api/team'
+import { usersApi } from '@/lib/api/users'
+import { isRbacEnforced } from '@/lib/access'
 import { maintenanceKeys } from '@/lib/hooks/useMaintenance'
 import { toast } from 'sonner'
 import { UserAvatar } from '@/components/shared/UserAvatar'
@@ -33,14 +33,11 @@ interface Props {
 export function ReassignTaskModal({ open, onClose, taskId, currentAssigneeId }: Props) {
   const queryClient = useQueryClient()
 
-  const { data: memberResp } = useQuery({
-    queryKey: ['team', 'members'],
-    queryFn: () => teamApi.listMembers(),
+  const { data: members = [] } = useQuery({
+    queryKey: ['users', 'reassign'],
+    queryFn: usersApi.list,
     enabled: open,
   })
-
-  // teamApi.listMembers() returns PaginatedTeam = { data: TeamMember[], ... }
-  const members = (memberResp?.data ?? []) as TeamMember[]
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -59,9 +56,12 @@ export function ReassignTaskModal({ open, onClose, taskId, currentAssigneeId }: 
     onError: () => toast.error('Failed to reassign task'),
   })
 
-  const eligibleMembers = members.filter(
-    (m) => ELIGIBLE_ROLES.includes(m.role) && m.status === 'active'
-  )
+  const eligibleMembers = members.filter((member) => {
+    if (member.status !== 'active') return false
+    if (!isRbacEnforced()) return true
+    const roleName = member.roles?.[0]?.name ?? ''
+    return ELIGIBLE_ROLES.includes(roleName)
+  })
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -92,7 +92,7 @@ export function ReassignTaskModal({ open, onClose, taskId, currentAssigneeId }: 
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {eligibleMembers.map((member) => (
                 <label
-                  key={member.id}
+                  key={member.userId}
                   className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-brand-200 hover:bg-brand-50/30 cursor-pointer transition-all"
                 >
                   <input
@@ -101,13 +101,13 @@ export function ReassignTaskModal({ open, onClose, taskId, currentAssigneeId }: 
                     {...register('assignedUserId')}
                     className="sr-only"
                   />
-                  <UserAvatar name={member.user?.fullName ?? ''} size="sm" />
+                  <UserAvatar name={`${member.firstName} ${member.lastName}`.trim()} size="sm" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-900">
-                      {member.user?.fullName ?? member.userId}
+                      {`${member.firstName} ${member.lastName}`.trim() || member.email}
                     </p>
                     <p className="text-xs text-slate-400 capitalize">
-                      {member.role.replace('_', ' ')}
+                      {(member.roles?.[0]?.name ?? 'member').replace('_', ' ')}
                     </p>
                   </div>
                 </label>
