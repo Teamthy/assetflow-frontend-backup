@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -42,7 +42,7 @@ export default function LoginPageContent() {
         register,
         handleSubmit,
         formState: { errors },
-    } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
+    } = useForm<LoginForm>({ resolver: formResolver(loginSchema) })
 
     const onSubmit = async (data: LoginForm) => {
         setIsLoading(true)

@@ -4,7 +4,7 @@ import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { ArrowLeft, Loader2, Package, MapPin, DollarSign, Settings2, AlertCircle } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -41,7 +41,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const canEditCore = can('assets.edit')
 
   const form = useForm<CreateAssetFormValues>({
-    resolver: zodResolver(createAssetSchema),
+    resolver: formResolver(createAssetSchema),
     values: asset ? {
       name: asset.name,
       description: asset.description ?? '',

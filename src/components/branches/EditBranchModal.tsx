@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { Building2, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,7 @@ export function EditBranchModal({ branch, open, onOpenChange }: EditBranchModalP
   const updateMutation = useUpdateBranch(branch.id)
 
   const form = useForm<BranchFormValues>({
-    resolver: zodResolver(branchSchema),
+    resolver: formResolver(branchSchema),
     defaultValues: {
       name: branch.name,
       code: branch.code ?? '',

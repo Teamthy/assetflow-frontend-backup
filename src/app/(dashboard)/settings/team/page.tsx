@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   Users, UserPlus, Mail, Loader2, MoreHorizontal, Shield,
@@ -635,7 +635,7 @@ function isInvitationExpired(expiresAt?: string): boolean {
 
 function InviteMemberModal({ open, onOpenChange, onInvited }: { open: boolean; onOpenChange: (o: boolean) => void; onInvited: (invite: PendingInvite) => void }) {
   const form = useForm<InviteFormValues>({
-    resolver: zodResolver(inviteSchema),
+    resolver: formResolver(inviteSchema),
     defaultValues: { email: '', role: 'standard_staff' },
   })
 

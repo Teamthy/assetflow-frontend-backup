@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { Wrench, Loader2, Search, Package, Check } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,7 @@ export function CreateMaintenanceModal({ open, onOpenChange, defaultAssetId }: P
   const assets: Asset[] = (assetData?.data ?? assetData?.items ?? []) as Asset[]
 
   const form = useForm<CreateMaintenanceFormValues>({
-    resolver: zodResolver(createMaintenanceSchema),
+    resolver: formResolver(createMaintenanceSchema),
     defaultValues: {
       assetId: defaultAssetId ?? '',
       title: '',

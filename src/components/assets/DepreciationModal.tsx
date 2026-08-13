@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { TrendingDown, Loader2, Calculator } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -37,7 +37,7 @@ export function DepreciationModal({ asset, open, onOpenChange }: Props) {
   const currentYear = new Date().getFullYear()
 
   const form = useForm<RecordDepreciationFormValues>({
-    resolver: zodResolver(recordDepreciationSchema),
+    resolver: formResolver(recordDepreciationSchema),
     defaultValues: {
       fiscalYear: currentYear,
       depreciationMethod: 'straight_line',

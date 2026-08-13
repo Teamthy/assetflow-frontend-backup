@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import { maintenanceApi } from '@/lib/api/maintenance'
 import { maintenanceKeys } from '@/lib/hooks/useMaintenance'
@@ -33,7 +33,7 @@ export default function EditMaintenancePage() {
   })
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: formResolver(schema),
   })
 
   useEffect(() => {

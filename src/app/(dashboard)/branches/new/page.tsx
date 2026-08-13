@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
@@ -29,7 +29,7 @@ export default function NewBranchPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: formResolver(schema),
   })
 
   const onSubmit = async (data: FormData) => {

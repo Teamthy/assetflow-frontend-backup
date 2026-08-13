@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { RotateCcw, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,7 @@ export function RestoreAssetModal({ asset, open, onOpenChange }: Props) {
   const restoreMutation = useRestoreAsset(asset.id)
 
   const form = useForm<RestoreAssetFormValues>({
-    resolver: zodResolver(restoreAssetSchema),
+    resolver: formResolver(restoreAssetSchema),
     defaultValues: { reason: '', targetStatus: 'active' },
   })
 

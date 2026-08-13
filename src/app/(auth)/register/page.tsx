@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -63,7 +63,7 @@ export default function RegisterPage() {
     watch,
     formState: { errors },
   } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+    resolver: formResolver(registerSchema),
   })
 
   const passwordValue = watch('password') ?? ''

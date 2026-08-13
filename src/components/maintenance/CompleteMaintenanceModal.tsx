@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,7 @@ export function CompleteMaintenanceModal({ task, open, onOpenChange }: CompleteM
   const completeMutation = useCompleteMaintenance(task.id)
 
   const form = useForm<CompleteMaintenanceFormValues>({
-    resolver: zodResolver(completeMaintenanceSchema),
+    resolver: formResolver(completeMaintenanceSchema),
     defaultValues: {
       completionNote: '',
       completedAt: new Date().toISOString().split('T')[0],

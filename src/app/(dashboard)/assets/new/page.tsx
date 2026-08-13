@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { ArrowLeft, Loader2, Package, MapPin, DollarSign, Settings2 } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -41,7 +41,7 @@ export default function CreateAssetPage() {
   })
 
   const form = useForm<CreateAssetFormInput, unknown, CreateAssetFormValues>({
-    resolver: zodResolver(createAssetSchema),
+    resolver: formResolver(createAssetSchema),
     defaultValues: {
       name: '',
       description: '',

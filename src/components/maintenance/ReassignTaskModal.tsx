@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -40,7 +40,7 @@ export function ReassignTaskModal({ open, onClose, taskId, currentAssigneeId }: 
   })
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: formResolver(schema),
     defaultValues: { assignedUserId: currentAssigneeId ?? '' },
   })
 
