@@ -1,39 +1,52 @@
-﻿import apiClient from './client'
+import apiClient from './client'
+import { invitationsApi } from './invitations'
+import { orgSettingsApi } from './organization-settings'
+import { usersApi } from './users'
+
+function unwrap(response: { data?: unknown }) {
+  const payload = response?.data as { data?: unknown } | unknown
+  if (payload && typeof payload === 'object' && 'data' in (payload as object)) {
+    return (payload as { data: unknown }).data
+  }
+  return payload
+}
 
 export const settingsApi = {
-  getOrganization: () =>
-    apiClient.get('/settings/organization'),
+  getOrganization: () => orgSettingsApi.get(),
 
   updateOrganization: (data: Record<string, unknown>) =>
-    apiClient.patch('/settings/organization', data),
+    orgSettingsApi.update(data),
 
   updateAccountingPolicy: (data: Record<string, unknown>) =>
-    apiClient.patch('/settings/accounting-policy', data),
+    orgSettingsApi.update(data),
 
-  getTeamMembers: () =>
-    apiClient.get('/team'),
+  getTeamMembers: async () => {
+    const members = await usersApi.list()
+    return { data: { data: members } }
+  },
 
-  inviteUser: (data: { email: string; role: string }) =>
+  inviteUser: (data: { email: string; role: string; firstName?: string; lastName?: string }) =>
     apiClient.post('/invitations', data),
 
   updateMemberRole: (userId: string, role: string) =>
-    apiClient.patch(`/team/${userId}/role`, { role }),
+    apiClient.patch(`/users/${userId}/role`, { role }),
 
-  suspendMember: (userId: string) =>
-    apiClient.patch(`/team/${userId}/suspend`),
+  suspendMember: (userId: string) => usersApi.suspend(userId),
 
-  reactivateMember: (userId: string) =>
-    apiClient.patch(`/team/${userId}/reactivate`),
+  reactivateMember: (userId: string) => usersApi.reactivate(userId),
 
-  removeMember: (userId: string) =>
-    apiClient.delete(`/team/${userId}`),
+  removeMember: (userId: string) => apiClient.delete(`/users/${userId}`),
 
-  getPendingInvitations: () =>
-    apiClient.get('/team/invitations'),
+  getPendingInvitations: async () => {
+    const invites = await invitationsApi.listPending()
+    return { data: { data: invites } }
+  },
 
   resendInvitation: (invitationId: string) =>
-    apiClient.post(`/team/invitations/${invitationId}/resend`),
+    apiClient.post(`/invitations/${invitationId}/resend`),
 
   cancelInvitation: (invitationId: string) =>
-    apiClient.delete(`/team/invitations/${invitationId}`),
+    invitationsApi.cancel(invitationId),
 }
+
+export { unwrap }

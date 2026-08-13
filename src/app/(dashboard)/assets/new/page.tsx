@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -21,6 +21,8 @@ import {
 import { createAssetSchema, type CreateAssetFormValues } from '@/lib/validations/asset'
 import { useCreateAsset } from '@/lib/hooks/useAssets'
 import { useBranches } from '@/lib/hooks/useBranches'
+import { usersApi } from '@/lib/api/users'
+import { useQuery } from '@tanstack/react-query'
 import type { CreateAssetDto, AssetStatus, AssetCondition } from '@/types'
 
 export default function CreateAssetPage() {
@@ -28,6 +30,10 @@ export default function CreateAssetPage() {
   const createAsset = useCreateAsset()
   const { data: branchResp, isLoading: loadingBranches } = useBranches()
   const branches = branchResp?.data ?? branchResp?.items ?? []
+  const { data: members = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['users', 'picker'],
+    queryFn: usersApi.list,
+  })
 
   const form = useForm<CreateAssetFormValues>({
     resolver: zodResolver(createAssetSchema),
@@ -191,10 +197,22 @@ export default function CreateAssetPage() {
                 <FormField control={form.control} name="assignedTo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assigned to</FormLabel>
-                    <FormControl>
-                      <Input placeholder="User ID (optional)" {...field} />
-                    </FormControl>
-                    <FormDescription>User picker coming soon</FormDescription>
+                    <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingUsers ? 'Loading people...' : 'Unassigned'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {members.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            {member.fullName ?? `${member.firstName} ${member.lastName}`.trim()} ({member.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Optional custodian for this asset</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />

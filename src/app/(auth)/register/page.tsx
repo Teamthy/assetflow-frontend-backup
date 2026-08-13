@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -10,7 +10,8 @@ import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
 import { useAuthStore } from '@/lib/stores/auth'
-import type { UserRole, ApiError } from '@/types'
+import { normalizeRole } from '@/lib/utils/roles'
+import type { ApiError } from '@/types'
 
 const registerSchema = z
   .object({
@@ -90,11 +91,7 @@ export default function RegisterPage() {
       // No refresh token returned by this backend on register
       const refreshToken = responseData?.refreshToken ?? ''
 
-      // No role returned — default to primary_admin on register
-      const role: UserRole =
-        responseData?.member?.role ??
-        responseData?.role ??
-        'primary_admin'
+      const role = normalizeRole(responseData?.role ?? responseData?.member?.role, 'admin')
 
       // Build fullName for display
       const userWithFullName = {

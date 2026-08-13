@@ -4,21 +4,11 @@ import Link from 'next/link'
 import { ShieldOff, Home, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/lib/stores/auth'
-
-const roleLabels: Record<string, string> = {
-  primary_admin: 'Primary Admin',
-  org_admin: 'Organization Admin',
-  asset_manager: 'Asset Manager',
-  finance_user: 'Finance User',
-  branch_manager: 'Branch Manager',
-  maintenance_staff: 'Maintenance Staff',
-  auditor: 'Auditor',
-  standard_staff: 'Standard Staff',
-}
+import { roleLabel as formatRoleLabel } from '@/lib/utils/roles'
 
 export default function UnauthorizedPage() {
   const role = useAuthStore((s) => s.role)
-  const roleLabel = role ? roleLabels[role] ?? role : 'Member'
+  const roleLabel = role ? formatRoleLabel(role) : 'Member'
 
   return (
     <div className="max-w-md mx-auto py-16 text-center">

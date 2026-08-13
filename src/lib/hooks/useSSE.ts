@@ -23,7 +23,7 @@ export function useSSE() {
     }
 
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:6000/api"
 
     // Pass token as query param since EventSource does not support headers
     const url = `${baseUrl}/notifications/stream?token=${encodeURIComponent(accessToken)}`

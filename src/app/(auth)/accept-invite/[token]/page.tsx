@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form'
 import { invitationsApi } from '@/lib/api/invitations'
 import { useAuthStore } from '@/lib/stores/auth'
+import { normalizeRole, roleLabel } from '@/lib/utils/roles'
 import type { UserRole } from '@/types'
 
 interface InvitationDetails {
@@ -40,22 +41,10 @@ const acceptSchema = z.object({
 
 type AcceptForm = z.infer<typeof acceptSchema>
 
-const roleLabels: Record<string, string> = {
-  primary_admin: 'Primary Admin',
-  org_admin: 'Organization Admin',
-  asset_manager: 'Asset Manager',
-  finance_user: 'Finance User',
-  branch_manager: 'Branch Manager',
-  maintenance_staff: 'Maintenance Staff',
-  auditor: 'Auditor',
-  standard_staff: 'Standard Staff',
-}
-
 const roleCapabilities: Record<string, string[]> = {
-  primary_admin: ['Manage all settings', 'Invite team members', 'Configure policies', 'View all reports', 'Full asset control'],
-  org_admin: ['Manage team members', 'Configure policies', 'View all assets', 'Create reports', 'Manage branches'],
+  admin: ['Manage all settings', 'Invite team members', 'Configure policies', 'View all reports', 'Full asset control'],
   asset_manager: ['Create and edit assets', 'Track depreciation', 'Manage disposals', 'Generate asset reports', 'Assign to branches'],
-  finance_user: ['View financial reports', 'Track depreciation', 'Export asset data', 'Monitor budgets', 'Analyze trends'],
+  finance: ['View financial reports', 'Track depreciation', 'Export asset data', 'Monitor budgets', 'Analyze trends'],
   branch_manager: ['Manage branch assets', 'Track branch inventory', 'Assign staff', 'View branch reports', 'Local administration'],
   maintenance_staff: ['Record maintenance', 'View task schedule', 'Mark tasks complete', 'Report issues', 'Track spend'],
   auditor: ['View all assets', 'Generate audit reports', 'Track changes', 'Verify records', 'Export compliance data'],
@@ -89,7 +78,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
         setInvitation({
           email: preview.email,
           organizationName: preview.organizationName,
-          role: preview.role ?? 'standard_staff',
+          role: normalizeRole(preview.role, 'standard_staff'),
           invitedByName: preview.invitedByName,
         })
       } catch {
@@ -200,7 +189,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className="text-xs text-slate-500">as</span>
               <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                {roleLabels[invitation.role] ?? invitation.role}
+                {roleLabel(invitation.role)}
               </span>
               {invitation.invitedByName && (
                 <span className="text-xs text-slate-500">by {invitation.invitedByName}</span>

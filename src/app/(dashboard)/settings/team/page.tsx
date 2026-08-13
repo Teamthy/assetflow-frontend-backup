@@ -37,9 +37,9 @@ import { formatDate } from '@/lib/utils/format'
 const inviteSchema = z.object({
   email: z.string().email('Enter a valid email address'),
   role: z.enum([
-    'org_admin',
+    'admin',
     'asset_manager',
-    'finance_user',
+    'finance',
     'branch_manager',
     'maintenance_staff',
     'auditor',
@@ -50,10 +50,9 @@ const inviteSchema = z.object({
 type InviteFormValues = z.infer<typeof inviteSchema>
 
 const roleLabels: Record<string, string> = {
-  primary_admin: 'Primary Admin',
-  org_admin: 'Organization Admin',
+  admin: 'Admin',
   asset_manager: 'Asset Manager',
-  finance_user: 'Finance User',
+  finance: 'Finance',
   branch_manager: 'Branch Manager',
   maintenance_staff: 'Maintenance Staff',
   auditor: 'Auditor',
@@ -61,10 +60,9 @@ const roleLabels: Record<string, string> = {
 }
 
 const roleColors: Record<string, string> = {
-  primary_admin: 'bg-purple-50 text-purple-700 border-purple-200',
-  org_admin: 'bg-purple-50 text-purple-700 border-purple-200',
+  admin: 'bg-purple-50 text-purple-700 border-purple-200',
   asset_manager: 'bg-blue-50 text-blue-700 border-blue-200',
-  finance_user: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  finance: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   branch_manager: 'bg-orange-50 text-orange-700 border-orange-200',
   maintenance_staff: 'bg-amber-50 text-amber-700 border-amber-200',
   auditor: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -458,9 +456,9 @@ export default function TeamPage() {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="org_admin">Organization Admin</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="asset_manager">Asset Manager</SelectItem>
-                <SelectItem value="finance_user">Finance User</SelectItem>
+                <SelectItem value="finance">Finance</SelectItem>
                 <SelectItem value="branch_manager">Branch Manager</SelectItem>
                 <SelectItem value="maintenance_staff">Maintenance Staff</SelectItem>
                 <SelectItem value="auditor">Auditor</SelectItem>
@@ -553,7 +551,14 @@ function normalizeMembers(input: unknown): TeamMember[] {
       id: String(getString(member, 'id') ?? getString(member, 'userId') ?? getString(nestedUser, 'id') ?? `${index}`),
       fullName,
       email: String(getString(member, 'email') ?? getString(nestedUser, 'email') ?? ''),
-      role: String(getString(member, 'role') ?? getString(nestedUser, 'role') ?? 'standard_staff'),
+      role: String(
+        getString(member, 'role') ??
+        getString(nestedUser, 'role') ??
+        (Array.isArray(member.roles) && member.roles[0] && typeof member.roles[0] === 'object'
+          ? (member.roles[0] as { name?: string }).name
+          : undefined) ??
+        'standard_staff'
+      ),
       joinedAt: getString(member, 'joinedAt') ?? getString(member, 'createdAt') ?? undefined,
       status: getString(member, 'status') ?? undefined,
       isCurrentUser: Boolean(getBoolean(member, 'isCurrentUser') ?? getBoolean(nestedUser, 'isCurrentUser') ?? false),
@@ -689,9 +694,9 @@ function InviteMemberModal({ open, onOpenChange, onInvited }: { open: boolean; o
                       <SelectTrigger><SelectValue /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="org_admin">Organization Admin</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="asset_manager">Asset Manager</SelectItem>
-                      <SelectItem value="finance_user">Finance User</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
                       <SelectItem value="branch_manager">Branch Manager</SelectItem>
                       <SelectItem value="maintenance_staff">Maintenance Staff</SelectItem>
                       <SelectItem value="auditor">Auditor</SelectItem>

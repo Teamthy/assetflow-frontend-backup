@@ -1,4 +1,4 @@
-﻿export type AssetStatus = 'active' | 'maintenance' | 'disposed'
+export type AssetStatus = 'active' | 'maintenance' | 'disposed'
 export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor'
 export type AccountingTreatment =
   | 'capitalized'
@@ -12,13 +12,12 @@ export type DisposalStatus = 'pending_approval' | 'approved' | 'rejected' | 'aut
 export type MaintenanceStatus = 'open' | 'in_progress' | 'completed' | 'cancelled'
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical'
 export type UserRole =
-  | 'primary_admin'
-  | 'org_admin'
+  | 'admin'
   | 'asset_manager'
-  | 'finance_user'
+  | 'finance'
+  | 'auditor'
   | 'branch_manager'
   | 'maintenance_staff'
-  | 'auditor'
   | 'standard_staff'
 
 export interface User {

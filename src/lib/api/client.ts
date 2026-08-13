@@ -1,4 +1,4 @@
-﻿import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/lib/stores/auth'
 
 const apiClient = axios.create({
@@ -86,6 +86,19 @@ apiClient.interceptors.response.use(
         if (!newAccessToken) throw new Error('No access token in refresh response')
 
         useAuthStore.getState().setTokens(newAccessToken, newRefreshToken)
+        if ((responseData?.role || responseData?.user) && useAuthStore.getState().user) {
+          const current = useAuthStore.getState()
+          if (current.user && current.organization) {
+            current.setAuth({
+              user: responseData.user ?? current.user,
+              organization: responseData.organization ?? current.organization,
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+              role: responseData.role ?? current.role,
+              isFirstLogin: current.isFirstLogin,
+            })
+          }
+        }
         processQueue(null, newAccessToken)
         original.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient(original)

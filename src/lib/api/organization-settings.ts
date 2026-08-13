@@ -6,7 +6,7 @@ export interface OrganizationSettings {
   capitalizationThreshold: string
   capitalizationCurrency: string
   minimumUsefulLifeMonths: number
-  lowValueTreatment: 'tracked_non_capitalized' | 'expensed'
+  lowValueTreatment: 'track_non_capitalized' | 'expense'
   defaultDepreciationMethod: 'straight_line' | 'reducing_balance'
   defaultUsefulLifeYears: number | null
   createdAt: string
@@ -17,7 +17,7 @@ export interface UpdateOrganizationSettingsDto {
   capitalizationThreshold?: string
   capitalizationCurrency?: string
   minimumUsefulLifeMonths?: number
-  lowValueTreatment?: 'tracked_non_capitalized' | 'expensed'
+  lowValueTreatment?: 'track_non_capitalized' | 'expense'
   defaultDepreciationMethod?: 'straight_line' | 'reducing_balance'
   defaultUsefulLifeYears?: number | null
 }

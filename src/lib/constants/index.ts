@@ -1,5 +1,5 @@
-﻿export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'AssetFlow'
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'AssetFlow'
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:6000/api'
 
 export const ASSET_STATUS_LABELS: Record<string, string> = {
   active: 'Active',

@@ -1,4 +1,6 @@
 import apiClient from './client'
+import { invitationsApi } from './invitations'
+import { usersApi } from './users'
 
 export interface TeamMember {
   id: string
@@ -41,30 +43,54 @@ export interface PaginatedInvitations {
 }
 
 export const teamApi = {
-  listMembers: (params?: { page?: number; limit?: number; search?: string }) =>
-    apiClient.get<PaginatedTeam>('/team/members', { params }),
+  listMembers: async (params?: { page?: number; limit?: number; search?: string }) => {
+    const members = await usersApi.list()
+    return {
+      data: {
+        data: members,
+        pagination: {
+          total: members.length,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? members.length,
+          totalPages: 1,
+        },
+      },
+    }
+  },
 
-  listInvitations: (params?: { page?: number; limit?: number }) =>
-    apiClient.get<PaginatedInvitations>('/team/invitations', { params }),
+  listInvitations: async (params?: { page?: number; limit?: number }) => {
+    const invitations = await invitationsApi.listPending()
+    return {
+      data: {
+        data: invitations,
+        pagination: {
+          total: invitations.length,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? invitations.length,
+          totalPages: 1,
+        },
+      },
+    }
+  },
 
   invite: (data: { email: string; role: string }) =>
     apiClient.post('/invitations', data),
 
   updateRole: (memberId: string, role: string) =>
-    apiClient.patch(`/team/members/${memberId}/role`, { role }),
+    apiClient.patch(`/users/${memberId}/role`, { role }),
 
   suspendMember: (memberId: string) =>
-    apiClient.patch(`/team/members/${memberId}/suspend`),
+    apiClient.patch(`/users/${memberId}/suspend`),
 
   reactivateMember: (memberId: string) =>
-    apiClient.patch(`/team/members/${memberId}/reactivate`),
+    apiClient.patch(`/users/${memberId}/reactivate`),
 
   removeMember: (memberId: string) =>
-    apiClient.delete(`/team/members/${memberId}`),
+    apiClient.delete(`/users/${memberId}`),
 
   cancelInvite: (inviteId: string) =>
-    apiClient.delete(`/team/invitations/${inviteId}`),
+    apiClient.delete(`/invitations/${inviteId}`),
 
   transferOwnership: (newOwnerId: string, password: string) =>
-    apiClient.post('/team/transfer-ownership', { newOwnerId, password }),
+    apiClient.post('/users/transfer-ownership', { newOwnerId, password }),
 }

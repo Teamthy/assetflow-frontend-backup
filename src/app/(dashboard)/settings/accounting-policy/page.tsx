@@ -22,7 +22,7 @@ export default function AccountingPolicyPage() {
             capitalizationThreshold: '',
             capitalizationCurrency: 'NGN',
             minimumUsefulLifeMonths: 12,
-            lowValueTreatment: 'tracked_non_capitalized',
+            lowValueTreatment: 'track_non_capitalized',
             defaultDepreciationMethod: 'straight_line',
             defaultUsefulLifeYears: 5,
         },
@@ -111,8 +111,8 @@ export default function AccountingPolicyPage() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="tracked_non_capitalized">Tracked non-capitalized</SelectItem>
-                                                <SelectItem value="expensed">Expensed</SelectItem>
+                                                <SelectItem value="track_non_capitalized">Tracked non-capitalized</SelectItem>
+                                                <SelectItem value="expense">Expensed</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
