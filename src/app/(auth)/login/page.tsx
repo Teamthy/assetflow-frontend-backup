@@ -1,4 +1,4 @@
-﻿import { Suspense } from 'react'
+import { Suspense } from 'react'
 import LoginPageContent from './LoginPageContent'
 
 export default function LoginPage() {
