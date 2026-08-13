@@ -59,6 +59,23 @@ const reportCards: ReportCard[] = [
     iconBg: 'bg-amber-50',
     iconColor: 'text-amber-600',
   },
+  {
+    title: 'Approvals log',
+    description: 'Pending and decided disposal / transfer requests',
+    href: '/approvals',
+    icon: ShieldCheck,
+    iconBg: 'bg-rose-50',
+    iconColor: 'text-rose-600',
+  },
+  {
+    title: 'Physical count',
+    description: 'Stock-take campaigns and exception rates',
+    href: '/audit',
+    icon: BarChart3,
+    iconBg: 'bg-slate-100',
+    iconColor: 'text-slate-700',
+    permission: 'reports.audit',
+  },
 ]
 
 export default function ReportsHubPage() {
@@ -87,7 +104,7 @@ export default function ReportsHubPage() {
     <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Reports"
-        description="Insights, exports, and audit-ready data for your organization"
+        description={`Period ${new Date().toLocaleDateString('en-NG', { month: 'long', year: 'numeric' })} · print or export for the audit file`}
         actions={
           can('assets.export') ? (
             <Button

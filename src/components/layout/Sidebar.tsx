@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import {
   LayoutDashboard, Package, Building2, Wrench, BarChart3,
-  Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck,
+  Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck, FileText, ClipboardCheck,
 } from 'lucide-react'
 import { isRbacEnforced } from '@/lib/access'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,13 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor'] },
       { label: 'Approvals', href: '/approvals', icon: ShieldCheck, roles: ['admin', 'finance', 'asset_manager', 'branch_manager'] },
+    ],
+  },
+  {
+    label: 'Compliance',
+    items: [
+      { label: 'Documents', href: '/documents', icon: FileText, roles: 'all' },
+      { label: 'Physical audit', href: '/audit', icon: ClipboardCheck, roles: ['admin', 'auditor', 'asset_manager', 'finance', 'branch_manager'] },
     ],
   },
   {

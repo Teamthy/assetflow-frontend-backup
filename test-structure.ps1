@@ -1,4 +1,4 @@
-﻿# ==============================================================
+# ==============================================================
 #  ASSETFLOW PROJECT STRUCTURE + INTEGRITY TEST
 # ==============================================================
 
@@ -225,7 +225,7 @@ foreach ($check in $keyExports) {
 }
 
 Section "23. BACKEND CONNECTIVITY"
-$apiUrl = "http://localhost:4000/api"
+$apiUrl = "http://localhost:6000/api"
 if (Test-Path ".env.local") {
     $envContent = Get-Content ".env.local" -Raw
     if ($envContent -match "NEXT_PUBLIC_API_URL=([^\r\n]+)") {

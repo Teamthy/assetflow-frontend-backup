@@ -1,0 +1,48 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { FileText } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
+import apiClient from '@/lib/api/client'
+
+export default function DocumentsPage() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['documents'],
+    queryFn: async () => {
+      const response = await apiClient.get('/documents')
+      return response.data?.data ?? response.data ?? []
+    },
+  })
+
+  const items = Array.isArray(data) ? data : data?.items ?? data?.data ?? []
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Documents"
+        description="Invoices, warranties, photos, and evidence attached to assets"
+      />
+      {isLoading ? (
+        <p className="text-sm text-slate-500">Loading documents…</p>
+      ) : isError ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Documents storage is not ready yet. Run <code>pnpm db:migrate</code> on the API if this persists.
+        </p>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+          No documents uploaded yet. Attach files from an asset record.
+        </div>
+      ) : (
+        <div className="divide-y rounded-xl border border-slate-200 bg-white">
+          {items.map((doc: { id: string; fileName?: string; originalFileName?: string; category?: string }) => (
+            <div key={doc.id} className="flex items-center justify-between px-4 py-3 text-sm">
+              <span className="font-medium text-slate-900">{doc.originalFileName ?? doc.fileName ?? doc.id}</span>
+              <span className="text-slate-500">{doc.category ?? 'file'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -11,7 +11,8 @@ export default function NetworkErrorPage() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-2">No Connection</h1>
         <p className="text-slate-500 mb-8 leading-relaxed">
-          It looks like you're offline. Check your internet connection and try again.
+          The AssetFlow API is not reachable. Confirm the server is running on
+          port 6000 and that NEXT_PUBLIC_API_URL points at /api, then try again.
         </p>
         <button
           onClick={() => window.location.reload()}

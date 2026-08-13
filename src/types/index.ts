@@ -146,6 +146,7 @@ export interface CreateAssetDto {
   assetTag: string
   status: AssetStatus
   condition: AssetCondition
+  purchaseCost: number
   description?: string
   serialNumber?: string
   category?: string
@@ -153,7 +154,6 @@ export interface CreateAssetDto {
   model?: string
   branchId?: string
   assignedTo?: string
-  purchaseCost?: number
   purchaseDate?: string
   warrantyExpiryDate?: string
   expectedUsefulLifeMonths?: number
@@ -165,6 +165,7 @@ export interface CreateAssetDto {
 
 export interface RestoreAssetDto {
   reason?: string
+  status?: AssetStatus
   targetStatus?: AssetStatus
 }
 
@@ -223,6 +224,7 @@ export interface AssetListParams {
   search?: string
   status?: AssetStatus | AssetStatus[]
   condition?: AssetCondition | AssetCondition[]
+  category?: string
   branchId?: string
   assigneeId?: string
   accountingTreatment?: AccountingTreatment

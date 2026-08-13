@@ -8,9 +8,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { ApiStatusBanner } from '@/components/auth/ApiStatusBanner'
 import { useAuthStore } from '@/lib/stores/auth'
 import { normalizeRole } from '@/lib/utils/roles'
-import type { ApiError } from '@/types'
 
 const schema = z.object({
   slug: z.string().min(2, 'Organization slug is required'),
@@ -51,8 +52,7 @@ export default function OrgLoginPage() {
       toast.success('Welcome back')
       router.push('/dashboard')
     } catch (error: unknown) {
-      const err = error as ApiError
-      toast.error(err?.response?.data?.message ?? 'Unable to sign in to this organization')
+      toast.error(getApiErrorMessage(error, 'Unable to sign in to this organization'))
     } finally {
       setIsLoading(false)
     }
@@ -64,6 +64,8 @@ export default function OrgLoginPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[var(--brand-600)]">Organization</p>
         <h2 className="mt-2 text-3xl font-semibold text-[var(--neutral-900)]">Sign in to a workspace</h2>
         <p className="mt-2 text-sm text-[var(--neutral-500)]">Use your organization slug if you belong to more than one workspace.</p>
+
+        <ApiStatusBanner />
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
           <div>

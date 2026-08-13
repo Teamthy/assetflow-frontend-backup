@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { ApiStatusBanner } from '@/components/auth/ApiStatusBanner'
 import { useAuthStore } from '@/lib/stores/auth'
 import { normalizeRole } from '@/lib/utils/roles'
-import type { ApiError } from '@/types'
 
 const registerSchema = z
   .object({
@@ -73,9 +74,6 @@ export default function RegisterPage() {
     try {
       const { confirmPassword: _confirmPassword, ...submitData } = data
       const response = await authApi.register(submitData)
-
-      // Response shape:
-      // { success: true, data: { user, organization, accessToken } }
       const responseData = response.data?.data ?? response.data
 
       const user = responseData?.user
@@ -84,11 +82,9 @@ export default function RegisterPage() {
       const organization = responseData?.organization
       if (!organization) throw new Error('Organization not found in response')
 
-      // Token is at data.accessToken directly
       const accessToken = responseData?.accessToken
       if (!accessToken) throw new Error('Access token not found in response')
 
-      // No refresh token returned by this backend on register
       const refreshToken = responseData?.refreshToken ?? ''
 
       const role = normalizeRole(responseData?.role ?? responseData?.member?.role, 'admin')
@@ -112,16 +108,8 @@ export default function RegisterPage() {
       router.replace('/onboarding')
 
     } catch (error: unknown) {
-      const err = error as ApiError
       console.error('[Register] Error:', error)
-      const message =
-        err?.response?.data?.message ??
-        (error as Error)?.message ??
-        'Registration failed'
-      toast.error(message)
-      if (err?.response?.status === 429) {
-        toast.error('Too many registration requests. Please wait a moment and try again.')
-      }
+      toast.error(getApiErrorMessage(error, 'Registration failed'))
     } finally {
       setIsLoading(false)
     }
@@ -137,7 +125,9 @@ export default function RegisterPage() {
             <p className="mt-2 text-sm text-[var(--neutral-500)]">Set up your organization and begin your asset workflow.</p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <ApiStatusBanner />
+
+          <form method="post" action="#" onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
             <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-full border border-[var(--border-default)] bg-[var(--neutral-50)] pl-5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z" fill="#6B7280" />

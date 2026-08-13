@@ -9,9 +9,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { ApiStatusBanner } from '@/components/auth/ApiStatusBanner'
 import { useAuthStore } from '@/lib/stores/auth'
 import { normalizeRole } from '@/lib/utils/roles'
-import type { ApiError } from '@/types'
 
 const loginSchema = z.object({
     email: z.string().email('Enter a valid email address'),
@@ -79,9 +80,8 @@ export default function LoginPageContent() {
             toast.success(`Welcome back, ${firstName}!`)
             router.push(role === 'admin' ? '/dashboard?welcome=true' : '/dashboard')
         } catch (error: unknown) {
-            const err = error as ApiError
             console.error('[Login] Error:', error)
-            toast.error(err?.response?.data?.message ?? 'Invalid email or password')
+            toast.error(getApiErrorMessage(error, 'Invalid email or password'))
         } finally {
             setIsLoading(false)
         }
@@ -96,6 +96,8 @@ export default function LoginPageContent() {
                         <h2 className="mt-2 text-3xl font-semibold text-[var(--neutral-900)]">Sign in to AssetFlow</h2>
                         <p className="mt-2 text-sm text-[var(--neutral-500)]">Access your dashboard, approvals, and team workspace.</p>
                     </div>
+
+                    <ApiStatusBanner />
 
                     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
                         {reason === 'session-expired' && (

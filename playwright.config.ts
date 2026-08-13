@@ -18,6 +18,12 @@ const config: PlaywrightTestConfig = {
     actionTimeout: 30000,
     navigationTimeout: 30000,
   },
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+    timeout: 120000,
+  },
   projects: [
     {
       name: 'chromium',
