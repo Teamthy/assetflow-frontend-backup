@@ -16,6 +16,8 @@ import {
 import { transferAssetSchema, type TransferAssetFormValues } from '@/lib/validations/asset'
 import { useTransferAsset } from '@/lib/hooks/useAssets'
 import { useBranches } from '@/lib/hooks/useBranches'
+import { usersApi } from '@/lib/api/users'
+import { useQuery } from '@tanstack/react-query'
 import type { Asset, Branch } from '@/types'
 
 interface TransferAssetFormProps {
@@ -30,6 +32,7 @@ export function TransferAssetForm({ asset, onSuccess, onCancel, submitLabel = 'T
   const transferMutation = useTransferAsset(asset.id)
 
   const branches: Branch[] = (branchData?.data ?? branchData?.items ?? []) as Branch[]
+  const { data: members = [] } = useQuery({ queryKey: ['users', 'transfer'], queryFn: usersApi.list })
   const currentBranchId = asset.branch?.id ?? ''
 
   const form = useForm<TransferAssetFormValues>({
@@ -123,14 +126,22 @@ export function TransferAssetForm({ asset, onSuccess, onCancel, submitLabel = 'T
             render={({ field }) => (
               <FormItem>
                 <FormLabel>New assignee</FormLabel>
-                <FormControl>
-                  <input
-                    {...field}
-                    placeholder="User ID or leave blank"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10"
-                  />
-                </FormControl>
-                <FormDescription>Enter the user ID to reassign this asset.</FormDescription>
+                <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {members.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>
+                        {`${member.firstName} ${member.lastName}`.trim() || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>Optional custodian after transfer.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

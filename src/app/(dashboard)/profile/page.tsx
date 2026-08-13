@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  User, Lock, Building2, Loader2, Camera, LogOut, ShieldAlert,
+  User, Lock, Building2, Loader2, LogOut, ShieldAlert,
   Calendar, Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -133,12 +133,6 @@ export default function ProfilePage() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
             <div className="relative inline-block">
               <UserAvatar name={user?.fullName} size="lg" className="w-20 h-20 text-2xl mx-auto" />
-              <button
-                onClick={() => toast.info('Photo upload coming soon')}
-                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center border-2 border-white transition-colors"
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
             </div>
             <h3 className="text-base font-semibold text-slate-900 mt-4 truncate">{user?.fullName}</h3>
             <p className="text-xs text-slate-500 mt-0.5 truncate">{user?.email}</p>

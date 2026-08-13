@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Package, Building2, Wrench, BarChart3,
   Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck,
 } from 'lucide-react'
+import { isRbacEnforced } from '@/lib/access'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/stores/auth'
 import { useUIStore } from '@/lib/stores/ui'
@@ -56,6 +57,7 @@ const navSections: NavSection[] = [
 ]
 
 function canAccess(roles: UserRole[] | 'all', userRole: UserRole | null): boolean {
+  if (!isRbacEnforced()) return true
   if (roles === 'all') return true
   if (!userRole) return false
   return roles.includes(userRole)

@@ -12,6 +12,8 @@ npm run dev
 
 The UI expects the API at `http://localhost:6000/api` (see `.env.example`).
 
+`NEXT_PUBLIC_ENFORCE_RBAC` defaults to off for this deployment so every signed-in role can open every screen. Set it to `true` to restore the permission matrix.
+
 ## Roles
 
 Canonical roles match the server:

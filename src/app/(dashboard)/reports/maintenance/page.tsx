@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { useMemo } from 'react'
@@ -82,7 +82,29 @@ export default function MaintenanceReportPage() {
   }, [data])
 
   function handleExport() {
-    toast.info('Maintenance CSV export coming soon')
+    const tasks = data?.items ?? []
+    const header = ['Title', 'Asset', 'Status', 'Priority', 'Assignee', 'Due']
+    const rows = tasks.map((task) => [
+      task.title,
+      task.asset?.name ?? '',
+      task.status,
+      task.priority,
+      task.assignedUser?.fullName ?? '',
+      task.dueDate ?? task.dueAt ?? '',
+    ])
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `maintenance-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success('Maintenance report exported')
   }
 
   return (
