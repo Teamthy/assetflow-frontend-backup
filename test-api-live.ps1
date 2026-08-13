@@ -1,4 +1,4 @@
-﻿# ==============================================================
+# ==============================================================
 #  ASSETFLOW LIVE API TEST v2 — All field names verified
 # ==============================================================
 
@@ -17,7 +17,7 @@ $script:ctx = @{
   taskIds     = @()
 }
 
-$API = "http://localhost:4000/api"
+$API = "http://localhost:6000/api"
 
 function Pass { param($n); Write-Host "  [PASS] $n" -ForegroundColor Green; $script:passed++; $script:results += [PSCustomObject]@{ Name=$n; Status="PASS" } }
 function Fail { param($n,$d=""); Write-Host "  [FAIL] $n $(if($d){"($d)"})" -ForegroundColor Red; $script:failed++; $script:results += [PSCustomObject]@{ Name=$n; Status="FAIL"; Detail=$d } }

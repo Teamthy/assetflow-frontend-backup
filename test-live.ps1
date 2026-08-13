@@ -17,7 +17,7 @@ $script:context = @{
     createdTaskIds = @()
 }
 
-$API = "http://localhost:4000/api"
+$API = "http://localhost:6000/api"
 
 # ---------- helpers ----------
 
@@ -1005,7 +1005,7 @@ if (Test-Path ".env.local") {
 Section "22. BACKEND CONNECTIVITY"
 # ==============================================================
 
-$apiUrl = "http://localhost:4000/api"
+$apiUrl = "http://localhost:6000/api"
 if (Test-Path ".env.local") {
     $envContent = Get-Content ".env.local" -Raw
     if ($envContent -match "NEXT_PUBLIC_API_URL=(.+)") {

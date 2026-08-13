@@ -1,11 +1,11 @@
-﻿# ==============================================================
+# ==============================================================
 #  ASSETFLOW — CONCURRENT MULTI-USER E2E TEST SUITE
 #  3 users, real data, all endpoints, all workflows
 #  Simulates real concurrent usage against the backend
 # ==============================================================
 
 param(
-  [string]$ApiUrl = "http://localhost:4000/api",
+  [string]$ApiUrl = "http://localhost:6000/api",
   [switch]$Verbose
 )
 

@@ -17,7 +17,12 @@ export const authApi = {
     apiClient.post('/auth/login', data),
 
   orgLogin: (data: { slug: string; email: string; password: string }) =>
-    apiClient.post('/auth/organization-login', data),
+    apiClient.post('/auth/organization-login', {
+      organizationSlug: data.slug,
+      slug: data.slug,
+      email: data.email,
+      password: data.password,
+    }),
 
   logout: () => apiClient.post('/auth/logout'),
 

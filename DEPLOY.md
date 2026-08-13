@@ -1,5 +1,46 @@
 # Deploy AssetFlow
 
+## Local — register / login Network Error
+
+The Next app on `:3000` is only the UI. Register posts to `NEXT_PUBLIC_API_URL` (default `http://localhost:6000/api`). If nothing is listening on `:6000`, the browser shows `AxiosError: Network Error`.
+
+`chrome-extension://.../M_ID` errors are a browser extension. Ignore them.
+
+In PowerShell:
+
+```powershell
+# 1. Is the API up?
+try { (Invoke-RestMethod http://localhost:6000/api/health) } catch { $_.Exception.Message }
+
+# 2. One Next process only
+Get-NetTCPConnection -LocalPort 3000,3001,6000 -ErrorAction SilentlyContinue |
+  Select-Object LocalPort, OwningProcess
+# If 3000 is an old Next: taskkill /PID <pid> /F
+
+# 3. Start Postgres if needed, then the API (new terminal)
+cd C:\Users\USER\Desktop\PROJECTS\Assetflow\assetflowserver
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# .env must contain a working DATABASE_URL, e.g.
+# DATABASE_URL=postgres://postgres:postgres@localhost:5432/assetflow
+pnpm add handlebars bullmq ioredis
+pnpm db:migrate
+pnpm dev
+# Must print: API running on port 6000
+
+# 4. Client env (restart Next after editing)
+# assetflowclient\.env.local
+# NEXT_PUBLIC_API_URL=http://localhost:6000/api
+# NEXT_PUBLIC_ENFORCE_RBAC=false
+```
+
+Optional Postgres via Docker (from `assetflowserver`):
+
+```powershell
+docker compose up -d
+```
+
+Auth pages now show a red banner when `GET /api/health` fails.
+
 ## Client — Vercel
 
 The Next.js app in `assetflowclient` is the Vercel target.
