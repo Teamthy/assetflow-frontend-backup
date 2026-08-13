@@ -7,34 +7,61 @@ export const disposalMethodEnum = z.enum([
 ])
 export const depreciationMethodEnum = z.enum(['straight_line', 'reducing_balance'])
 
-const emptyToUndefined = (value: unknown) => {
-  if (value === '' || value === null || value === undefined) return undefined
-  return value
+const isBlank = (value: unknown) => value === '' || value === null || value === undefined
+
+/** Form-safe number: accepts '', undefined, string, or number. Never uses z.preprocess (input becomes unknown). */
+function formNumber(options: {
+  requiredMessage?: string
+  invalidMessage: string
+  min?: number
+  integer?: boolean
+}) {
+  return z
+    .union([z.number(), z.string(), z.undefined(), z.null()])
+    .transform((value, ctx) => {
+      if (isBlank(value)) {
+        if (options.requiredMessage) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: options.requiredMessage })
+          return z.NEVER
+        }
+        return undefined
+      }
+      const numeric = typeof value === 'number' ? value : Number(value)
+      if (!Number.isFinite(numeric)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: options.invalidMessage })
+        return z.NEVER
+      }
+      if (options.integer && !Number.isInteger(numeric)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: options.invalidMessage })
+        return z.NEVER
+      }
+      if (options.min !== undefined && numeric < options.min) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: options.min === 0 ? 'Cannot be negative' : `Cannot be less than ${options.min}`,
+        })
+        return z.NEVER
+      }
+      return numeric
+    })
 }
 
-const requiredMoney = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number({
-  required_error: 'Purchase cost is required',
-  invalid_type_error: 'Purchase cost is required',
-}).min(0, 'Purchase cost cannot be negative'))
+const requiredMoney = formNumber({
+  requiredMessage: 'Purchase cost is required',
+  invalidMessage: 'Purchase cost is required',
+  min: 0,
+})
 
-const optionalMoney = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number().min(0).optional())
+const optionalMoney = formNumber({
+  invalidMessage: 'Enter a valid amount',
+  min: 0,
+})
 
-const optionalMonths = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number().int().min(0).optional())
+const optionalMonths = formNumber({
+  invalidMessage: 'Enter a whole number of months',
+  min: 0,
+  integer: true,
+})
 
 export const createAssetSchema = z.object({
   name: z.string().min(2, 'Asset name is required').max(200),
@@ -76,7 +103,14 @@ export const createAssetSchema = z.object({
     })
   }
 })
-export type CreateAssetFormValues = z.input<typeof createAssetSchema>
+export type CreateAssetFormInput = z.input<typeof createAssetSchema>
+export type CreateAssetFormValues = z.output<typeof createAssetSchema>
+
+export function toOptionalNumber(value: unknown): number | undefined {
+  if (value === '' || value === null || value === undefined) return undefined
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
 
 export const transferAssetSchema = z.object({
   toBranchId: z.string().optional().or(z.literal('')),
