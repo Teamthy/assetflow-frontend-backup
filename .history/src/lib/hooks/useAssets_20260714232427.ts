@@ -1,0 +1,264 @@
+﻿'use client'
+
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { assetApi } from '@/lib/api/assets'
+import type {
+  Asset,
+  AssetListParams,
+  PaginatedResponse,
+  CreateAssetDto,
+  UpdateAssetDto,
+  TransferAssetDto,
+  DisposeAssetDto,
+  RestoreAssetDto,
+  RecordDepreciationDto,
+  ApiError,
+} from '@/types'
+
+export const assetKeys = {
+  all: ['assets'] as const,
+  lists: () => [...assetKeys.all, 'list'] as const,
+  list: (params: AssetListParams) => [...assetKeys.lists(), params] as const,
+  details: () => [...assetKeys.all, 'detail'] as const,
+  detail: (id: string) => [...assetKeys.details(), id] as const,
+  timeline: (id: string) => [...assetKeys.detail(id), 'timeline'] as const,
+  audit: () => [...assetKeys.all, 'audit'] as const,
+}
+
+export function useAssets(
+  params: AssetListParams = {},
+  options?: Partial<UseQueryOptions<PaginatedResponse<Asset>>>
+) {
+  return useQuery({
+    queryKey: assetKeys.list(params),
+    queryFn: async () => {
+      const res = await assetApi.list(params)
+      const d = res.data as unknown
+
+      if (Array.isArray(d)) {
+        const arr = d as Asset[]
+        return {
+          data: arr,
+          pagination: { total: arr.length, page: 1, limit: 100, totalPages: 1 },
+        } as PaginatedResponse<Asset>
+      }
+
+      if (d && typeof d === 'object') {
+        const obj = d as Record<string, unknown>
+
+        if (Array.isArray(obj.data)) {
+          const arr = obj.data as Asset[]
+          return {
+            data: arr,
+            pagination: { total: arr.length, page: 1, limit: 100, totalPages: 1 },
+          } as PaginatedResponse<Asset>
+        }
+
+        if (obj.data && typeof obj.data === 'object') {
+          const nested = obj.data as { data?: Asset[]; items?: Asset[]; pagination?: unknown }
+          const arr = Array.isArray(nested.data)
+            ? nested.data
+            : Array.isArray(nested.items)
+              ? nested.items
+              : []
+          return {
+            data: arr as Asset[],
+            pagination: nested.pagination ?? { total: arr.length, page: 1, limit: 100, totalPages: 1 },
+          } as PaginatedResponse<Asset>
+        }
+      }
+
+      return {
+        data: [] as Asset[],
+        pagination: { total: 0, page: 1, limit: 100, totalPages: 1 },
+      } as PaginatedResponse<Asset>
+    },
+    placeholderData: (prev) => prev,
+    ...options,
+  })
+}
+
+export function useAsset(id: string) {
+  return useQuery({
+    queryKey: assetKeys.detail(id),
+    queryFn: async () => {
+      const res = await assetApi.get(id)
+      const d = res.data as { success?: boolean; data?: Asset } | Asset
+      if (d && 'data' in d && d.data) return d.data as Asset
+      return d as Asset
+    },
+    enabled: Boolean(id),
+  })
+}
+
+export function useAssetTimeline(
+  id: string,
+  params?: { page?: number; eventType?: string }
+) {
+  return useQuery({
+    queryKey: assetKeys.timeline(id),
+    queryFn: async () => {
+      const res = await assetApi.timeline(id, params)
+      const d = res.data as { data?: unknown[] } | unknown[]
+      if (Array.isArray(d)) return d
+      if (d && 'data' in d) return (d as { data: unknown[] }).data
+      return []
+    },
+    enabled: Boolean(id),
+  })
+}
+
+export function useAuditSummary() {
+  return useQuery({
+    queryKey: assetKeys.audit(),
+    queryFn: async () => {
+      const res = await assetApi.audit()
+      const d = res.data as { data?: unknown } | unknown
+      if (d && typeof d === 'object' && 'data' in d) {
+        return (d as { data: unknown }).data
+      }
+      return d
+    },
+  })
+}
+
+export function useCreateAsset() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateAssetDto) =>
+      assetApi.create(data).then((r) => {
+        const d = r.data as { data?: Asset } | Asset
+        if (d && 'data' in d && d.data) return d.data as Asset
+        return d as Asset
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: assetKeys.audit() })
+      toast.success('Asset created successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Failed to create asset'
+      )
+    },
+  })
+}
+
+export function useUpdateAsset(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateAssetDto) =>
+      assetApi.update(id, data).then((r) => {
+        const d = r.data as { data?: Asset } | Asset
+        if (d && 'data' in d && d.data) return d.data as Asset
+        return d as Asset
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      toast.success('Asset updated successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Failed to update asset'
+      )
+    },
+  })
+}
+
+export function useDeleteAsset() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => assetApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      toast.success('Asset deleted')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Failed to delete asset'
+      )
+    },
+  })
+}
+
+export function useRestoreAsset(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: RestoreAssetDto) =>
+      assetApi.restore(id, data).then((r) => {
+        const d = r.data as { data?: Asset } | Asset
+        if (d && 'data' in d && d.data) return d.data as Asset
+        return d as Asset
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      toast.success('Asset restored successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Failed to restore asset'
+      )
+    },
+  })
+}
+
+export function useTransferAsset(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: TransferAssetDto) =>
+      assetApi.transfer(id, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      toast.success('Asset transferred successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Transfer failed'
+      )
+    },
+  })
+}
+
+export function useDisposeAsset(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: DisposeAssetDto) =>
+      assetApi.dispose(id, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      toast.success('Asset disposed successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Disposal failed'
+      )
+    },
+  })
+}
+
+export function useRecordDepreciation(assetId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: RecordDepreciationDto) =>
+      assetApi.depreciate(assetId, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: assetKeys.detail(assetId) })
+      toast.success('Depreciation recorded successfully')
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error.response?.data?.message ?? 'Failed to record depreciation'
+      )
+    },
+  })
+}
