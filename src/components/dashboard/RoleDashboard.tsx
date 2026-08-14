@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3, Package, Wrench, ShieldCheck, FileText, ClipboardCheck,
-  AlertTriangle, Clock3, ArrowRight, Plus, Upload, Download,
+  AlertTriangle, ArrowRight, Plus, Upload, Download,
 } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -106,8 +106,8 @@ export function RoleDashboard() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-slate-900">Operating snapshot</h3>
-          <p className="mt-1 text-sm text-slate-500">IAS 16-style register health for today’s session.</p>
+          <h3 className="text-sm font-semibold text-slate-900">Register status</h3>
+          <p className="mt-1 text-sm text-slate-500">Assets, maintenance, and data gaps.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: 'In maintenance', value: asNumber(summary.maintenance), href: '/assets?status=maintenance' },
@@ -127,10 +127,10 @@ export function RoleDashboard() {
           <h3 className="text-sm font-semibold text-slate-900">Quick actions</h3>
           <div className="mt-3 space-y-2">
             {[
-              { href: '/assets/new', label: 'Register an asset', icon: Plus },
-              { href: '/assets/import', label: 'Import Excel register', icon: Upload },
-              { href: '/audit', label: 'Start a physical count', icon: ClipboardCheck },
-              { href: '/documents', label: 'Evidence locker', icon: FileText },
+              { href: '/assets/new', label: 'Add an asset', icon: Plus },
+              { href: '/assets/import', label: 'Import from Excel', icon: Upload },
+              { href: '/audit', label: 'Start a stock-take', icon: ClipboardCheck },
+              { href: '/documents', label: 'Documents', icon: FileText },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-slate-700 hover:bg-slate-50">
                 <item.icon className="h-4 w-4 text-slate-400" />
@@ -152,10 +152,10 @@ export function RoleDashboard() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {[
-          { href: '/assets', title: 'Fixed asset register', body: 'Add, transfer, dispose, and export.' },
-          { href: '/approvals', title: 'Segregation of duties', body: 'Review high-value disposal requests.' },
-          { href: '/reports', title: 'Management reports', body: 'Finance, maintenance, and completeness.' },
-          { href: '/audit', title: 'Physical verification', body: 'Campaigns for stock-take walkthroughs.' },
+          { href: '/assets', title: 'Asset register', body: 'Add, transfer, dispose, and export.' },
+          { href: '/approvals', title: 'Approvals', body: 'Review high-value disposal requests.' },
+          { href: '/reports', title: 'Reports', body: 'Finance, maintenance, and completeness.' },
+          { href: '/audit', title: 'Stock-take', body: 'Physical count campaigns.' },
         ].map((item) => (
           <Link key={item.href} href={item.href} className="rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-blue-200">
             <h3 className="font-semibold text-slate-900">{item.title}</h3>
@@ -164,10 +164,6 @@ export function RoleDashboard() {
         ))}
       </div>
 
-      <p className="flex items-center gap-1.5 text-xs text-slate-400">
-        <Clock3 className="h-3.5 w-3.5" />
-        Figures refresh on a 2-minute cache. Suitable for ~100 daily users on the Vercel + API split.
-      </p>
     </div>
   )
 }

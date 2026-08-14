@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -90,13 +90,8 @@ export default function OnboardingPage() {
             className="w-full rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-8 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] sm:p-10"
           >
             <div className="mb-8 text-center">
-              <div className="mb-4 flex justify-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-50)] text-3xl">
-                  ✨
-                </div>
-              </div>
               <h1 className="text-2xl font-semibold text-[var(--neutral-900)]">
-                Welcome to AssetFlow, {firstName}!
+                {organization?.name ?? 'AssetFlow'}
               </h1>
               <p className="mt-2 text-sm text-[var(--neutral-500)]">
                 Your organization{' '}
@@ -107,8 +102,8 @@ export default function OnboardingPage() {
 
             <div className="mb-6 h-px bg-[var(--border-default)]" />
 
-            <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-[var(--neutral-400)]">
-              Let us help you get set up in 3 simple steps
+            <p className="mb-4 text-center text-xs font-medium text-slate-400">
+              Three steps to finish setup
             </p>
 
             <div className="mb-8 space-y-3">
@@ -168,19 +163,10 @@ export default function OnboardingPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-8 text-center shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] sm:p-10"
           >
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-50)]"
-            >
-              <span className="text-4xl">🎉</span>
-            </motion.div>
-
             <h2 className="mb-2 text-2xl font-semibold text-[var(--neutral-900)]">
-              You are all set, {firstName}!
+              Setup complete
             </h2>
-            <p className="mb-8 text-sm text-[var(--neutral-500)]">Here is what you have set up:</p>
+            <p className="mb-8 text-sm text-[var(--neutral-500)]">Ready, {firstName}.</p>
 
             <div className="mb-8 space-y-2.5 text-left">
               {[
@@ -321,7 +307,7 @@ function StepContent({ step, onNext, onBack, onSkip, onFinish, router }: {
   router: ReturnType<typeof useRouter>
 }) {
   const descriptions = [
-    'We use this to personalize your experience and format your reports correctly.',
+    'Used on reports and the organization profile.',
     'These settings control how AssetFlow classifies your assets. You can change these at any time.',
     'Create branches for each location where you have assets. You can add more later.',
     'Choose how you want to bring your assets into AssetFlow.',
@@ -348,9 +334,9 @@ function StepContent({ step, onNext, onBack, onSkip, onFinish, router }: {
         </div>
         <div className="space-y-4">
           {[
-            { emoji: '📊', label: 'Import from Excel', badge: 'RECOMMENDED', desc: 'Already have an asset register in Excel? Upload it in minutes.', action: async () => { onNext(); await router.push('/assets/import?from=onboarding') } },
-            { emoji: '✏️', label: 'Add assets manually', badge: null, desc: 'Start fresh and add assets one by one.', action: async () => { onNext(); await router.push('/assets/new?from=onboarding') } },
-            { emoji: '⏭️', label: 'Skip for now', badge: null, desc: 'Go to your dashboard and add assets later.', action: onFinish },
+            { label: 'Import from Excel', badge: 'Recommended', desc: 'Upload an existing register.', action: async () => { onNext(); await router.push('/assets/import?from=onboarding') } },
+            { label: 'Add one asset', badge: null, desc: 'Create a single record now.', action: async () => { onNext(); await router.push('/assets/new?from=onboarding') } },
+            { label: 'Skip', badge: null, desc: 'Go to the dashboard.', action: onFinish },
           ].map((opt) => (
             <motion.button
               key={opt.label}
@@ -361,7 +347,6 @@ function StepContent({ step, onNext, onBack, onSkip, onFinish, router }: {
             >
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">{opt.emoji}</span>
                   <p className="font-semibold text-[var(--neutral-900)]">{opt.label}</p>
                 </div>
                 {opt.badge && (
@@ -370,7 +355,7 @@ function StepContent({ step, onNext, onBack, onSkip, onFinish, router }: {
                   </span>
                 )}
               </div>
-              <p className="pl-12 text-sm text-[var(--neutral-500)]">{opt.desc}</p>
+              <p className="text-sm text-[var(--neutral-500)]">{opt.desc}</p>
             </motion.button>
           ))}
         </div>

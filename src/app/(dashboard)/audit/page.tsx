@@ -52,7 +52,7 @@ export default function AuditCampaignsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Physical audit"
-        description="IAS 16 / stock-take campaigns for walkthroughs, exceptions, and sign-off"
+        description="Physical count campaigns, exceptions, and sign-off"
       />
 
       <form
@@ -80,7 +80,7 @@ export default function AuditCampaignsPage() {
         <p className="text-sm text-slate-500">Loading campaigns…</p>
       ) : isError ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Audit campaigns are not ready yet. Run <code>pnpm db:migrate</code> on the API if this persists.
+          Audit campaigns are not available yet. Try again shortly.
         </p>
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">

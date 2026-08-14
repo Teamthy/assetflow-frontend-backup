@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth'
 import { getApiErrorMessage } from '@/lib/api/errors'
-import { ApiStatusBanner } from '@/components/auth/ApiStatusBanner'
 import { useAuthStore } from '@/lib/stores/auth'
 import { normalizeRole } from '@/lib/utils/roles'
 
@@ -20,6 +19,9 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
+
+const fieldClass =
+  'h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
 
 export default function OrgLoginPage() {
   const router = useRouter()
@@ -49,7 +51,6 @@ export default function OrgLoginPage() {
         refreshToken: payload.refreshToken ?? '',
         role: normalizeRole(payload.role, 'standard_staff'),
       })
-      toast.success('Welcome back')
       router.push('/dashboard')
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, 'Unable to sign in to this organization'))
@@ -59,37 +60,41 @@ export default function OrgLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-page)] px-4 py-10 flex items-center justify-center">
-      <div className="w-full max-w-md rounded-3xl border border-[var(--border-default)] bg-[var(--surface-card)] p-8 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)]">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[var(--brand-600)]">Organization</p>
-        <h2 className="mt-2 text-3xl font-semibold text-[var(--neutral-900)]">Sign in to a workspace</h2>
-        <p className="mt-2 text-sm text-[var(--neutral-500)]">Use your organization slug if you belong to more than one workspace.</p>
+    <div>
+      <h1 className="text-xl font-semibold text-slate-900">Organization sign in</h1>
+      <p className="mt-1 text-sm text-slate-500">Use the organization slug if you belong to more than one workspace.</p>
 
-        <ApiStatusBanner />
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3.5">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Organization slug</label>
+          <input {...register('slug')} placeholder="acme-holdings" className={fieldClass} />
+          {errors.slug && <p className="mt-1 text-xs text-red-600">{errors.slug.message}</p>}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+          <input {...register('email')} type="email" placeholder="you@company.com" className={fieldClass} />
+          {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+          <input {...register('password')} type="password" placeholder="Password" className={fieldClass} />
+          {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
+        </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex h-11 w-full items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {isLoading ? 'Signing in…' : 'Continue'}
+        </button>
+      </form>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
-          <div>
-            <input {...register('slug')} placeholder="organization-slug" className="h-12 w-full rounded-full border border-[var(--border-default)] bg-[var(--neutral-50)] px-5 text-sm outline-none" />
-            {errors.slug && <p className="mt-2 text-xs text-red-500">{errors.slug.message}</p>}
-          </div>
-          <div>
-            <input {...register('email')} type="email" placeholder="Email address" className="h-12 w-full rounded-full border border-[var(--border-default)] bg-[var(--neutral-50)] px-5 text-sm outline-none" />
-            {errors.email && <p className="mt-2 text-xs text-red-500">{errors.email.message}</p>}
-          </div>
-          <div>
-            <input {...register('password')} type="password" placeholder="Password" className="h-12 w-full rounded-full border border-[var(--border-default)] bg-[var(--neutral-50)] px-5 text-sm outline-none" />
-            {errors.password && <p className="mt-2 text-xs text-red-500">{errors.password.message}</p>}
-          </div>
-          <button type="submit" disabled={isLoading} className="h-11 w-full rounded-full bg-[var(--brand-600)] text-sm font-semibold text-white disabled:opacity-60">
-            {isLoading ? 'Signing in...' : 'Continue'}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-[var(--neutral-500)]">
-          Single organization?{' '}
-          <Link href="/login" className="font-semibold text-[var(--brand-600)]">Use regular sign in</Link>
-        </p>
-      </div>
+      <p className="mt-5 text-center text-sm text-slate-500">
+        One organization?{' '}
+        <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
+          Standard sign in
+        </Link>
+      </p>
     </div>
   )
 }

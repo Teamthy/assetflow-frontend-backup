@@ -97,7 +97,7 @@ export function useImportAssets() {
     mutationFn: async (file: File) => assetApi.import(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
-      toast.success('Assets imported successfully')
+      queryClient.invalidateQueries({ queryKey: assetKeys.audit() })
     },
     onError: (error: ApiError) => {
       toast.error(getApiErrorMessage(error, 'Import failed'))

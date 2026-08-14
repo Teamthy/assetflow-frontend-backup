@@ -72,8 +72,8 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Evidence locker"
-        description="Invoices, warranties, photos, and disposal evidence attached to assets"
+        title="Documents"
+        description="Invoices, warranties, photos, and other files attached to assets"
       />
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -95,7 +95,7 @@ export default function DocumentsPage() {
             {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Upload'}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Use the asset ID from the asset detail URL. Files stay on the API host, not Vercel.</p>
+        <p className="mt-2 text-xs text-slate-500">Use the asset ID from the asset page URL.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -114,12 +114,12 @@ export default function DocumentsPage() {
         <p className="text-sm text-slate-500">Loading documents…</p>
       ) : isError ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Documents storage is not ready yet. Run <code>pnpm db:migrate</code> on the API if this persists.
+          Documents are not available yet. Try again shortly.
         </p>
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
           <FileText className="mx-auto mb-3 h-8 w-8 text-slate-400" />
-          No documents in this view. Upload an invoice or warranty to start the evidence trail.
+          No documents in this view.
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">

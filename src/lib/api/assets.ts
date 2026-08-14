@@ -113,13 +113,14 @@ export const assetApi = {
     return response.data.data
   },
 
-  import: (file: File) => {
+  import: async (file: File) => {
     const formData = new FormData()
     formData.append('file', file)
-    return apiClient.post<{ success: boolean; data: unknown }>(
+    const response = await apiClient.post<{ success: boolean; data: unknown }>(
       '/assets/import',
       formData,
-      { headers: { 'Content-Type': undefined } }
+      { timeout: 120000 }
     )
+    return response.data?.data ?? response.data
   },
 }

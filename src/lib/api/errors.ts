@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { API_BASE_URL } from './config'
 
 const readApiMessage = (error: unknown): string | undefined => {
   if (!axios.isAxiosError(error)) return undefined
@@ -43,9 +42,9 @@ export const getApiErrorMessage = (
     }
     if (!error.response) {
       if (error.code === 'ECONNABORTED') {
-        return `The AssetFlow API at ${API_BASE_URL} timed out.`
+        return 'The request timed out. Try again.'
       }
-      return `Cannot reach the AssetFlow API at ${API_BASE_URL}. In assetflowserver run pnpm dev until it logs "API running on port 7000", then open ${API_BASE_URL}/health — it must return {"status":"ok"}.`
+      return 'Unable to reach the server. Check your connection and try again.'
     }
   }
 

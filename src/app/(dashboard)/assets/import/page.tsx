@@ -21,11 +21,64 @@ type Step = 'template' | 'upload' | 'preview' | 'confirm' | 'results'
 interface ImportResult {
   inserted?: number
   failed?: number
-  successCount?: number
+  totalRows?: number
+  insertedCount?: number
   failedCount?: number
+  successCount?: number
   errors?: Array<{ row?: number; message?: string; error?: string }>
   failures?: Array<{ row?: number; message?: string; error?: string }>
+  successfulRows?: Array<{ row?: number; assetName?: string; assetTag?: string }>
   recognitionSummary?: Record<string, number>
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+}
+
+function readImportResult(response: unknown): ImportResult {
+  const root = asRecord(response)
+  const layerA = asRecord(root.data)
+  const layerB = asRecord(layerA.data)
+  const bags = [layerB, layerA, root]
+
+  const pickNumber = (...keys: string[]) => {
+    for (const bag of bags) {
+      for (const key of keys) {
+        const value = bag[key]
+        if (typeof value === 'number' && Number.isFinite(value)) return value
+        if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+          return Number(value)
+        }
+      }
+    }
+    return 0
+  }
+
+  const pickArray = (...keys: string[]) => {
+    for (const bag of bags) {
+      for (const key of keys) {
+        if (Array.isArray(bag[key])) return bag[key] as ImportResult['errors']
+      }
+    }
+    return []
+  }
+
+  const pickSummary = () => {
+    for (const bag of bags) {
+      if (bag.recognitionSummary && typeof bag.recognitionSummary === 'object') {
+        return bag.recognitionSummary as Record<string, number>
+      }
+    }
+    return undefined
+  }
+
+  return {
+    inserted: pickNumber('insertedCount', 'inserted', 'successCount', 'created'),
+    failed: pickNumber('failedCount', 'failed'),
+    totalRows: pickNumber('totalRows'),
+    errors: pickArray('failures', 'errors'),
+    recognitionSummary: pickSummary(),
+  }
 }
 
 const MAX_FILE_SIZE_MB = 5
@@ -53,14 +106,6 @@ export default function ImportAssetsPage() {
 
   function validateFile(f: File): boolean {
     setFileError('')
-    const isSpreadsheet =
-      f.name.endsWith('.xlsx') ||
-      f.name.endsWith('.xls') ||
-      f.name.endsWith('.csv') ||
-      f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      f.type === 'application/vnd.ms-excel' ||
-      f.type === 'text/csv'
-
     if (!f.name.endsWith('.xlsx') && f.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
       setFileError('The API accepts official .xlsx only. Download the template — CSV and .xls are rejected.')
       return false
@@ -109,18 +154,7 @@ export default function ImportAssetsPage() {
 
     try {
       const response = await importMutation.mutateAsync(file) as unknown
-
-      let normalized: ImportResult = {}
-      if (response && typeof response === 'object') {
-        const r = response as Record<string, unknown>
-        const data = (r.data as ImportResult) ?? (r as ImportResult)
-        normalized = {
-          inserted: (data.inserted as number) ?? (data.successCount as number) ?? 0,
-          failed: (data.failed as number) ?? (data.failedCount as number) ?? 0,
-          errors: (data.errors as ImportResult['errors']) ?? (data.failures as ImportResult['errors']) ?? [],
-          recognitionSummary: data.recognitionSummary as Record<string, number> | undefined,
-        }
-      }
+      const normalized = readImportResult(response)
 
       setResult(normalized)
       const entry = {
@@ -133,7 +167,13 @@ export default function ImportAssetsPage() {
       setHistory(nextHistory)
       window.localStorage.setItem('assetflow-import-history', JSON.stringify(nextHistory))
       setStep('results')
-      toast.success((normalized.inserted ?? 0) + ' assets imported')
+      if ((normalized.inserted ?? 0) > 0) {
+        toast.success(`${normalized.inserted} assets imported`)
+      } else if ((normalized.failed ?? 0) > 0) {
+        toast.error(`Import finished: 0 inserted, ${normalized.failed} failed`)
+      } else {
+        toast.warning('Import finished with 0 new rows. Check Assets — tags may already exist.')
+      }
     } catch {
       // toast in hook
       setStep('preview')
@@ -174,7 +214,7 @@ export default function ImportAssetsPage() {
 
       <PageHeader
         title="Import your asset register"
-        description="Bulk import your existing asset register from Excel or CSV"
+        description="Bulk import your existing asset register from the official Excel template"
       />
 
       {isOnboardingFlow && (
@@ -184,9 +224,9 @@ export default function ImportAssetsPage() {
               <Upload className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-blue-900">Excel-first setup is the fastest way to get started</h3>
+              <h3 className="text-sm font-semibold text-blue-900">Import the register</h3>
               <p className="text-sm text-blue-800 mt-1">
-                Download the template, add your register, and review the imported rows before you finish.
+                Download the template, fill it, then upload the .xlsx file.
               </p>
             </div>
           </div>
@@ -236,20 +276,18 @@ export default function ImportAssetsPage() {
             <div className="mt-8 pt-6 border-t border-slate-100 text-left">
               <h4 className="text-sm font-semibold text-slate-900 mb-3">Required columns</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <ColumnHint name="name" required />
-                <ColumnHint name="assetTag" required />
-                <ColumnHint name="serialNumber" />
-                <ColumnHint name="purchaseCost" />
-                <ColumnHint name="purchaseDate" />
-                <ColumnHint name="status" />
-                <ColumnHint name="condition" />
-                <ColumnHint name="expectedUsefulLifeMonths" />
-                <ColumnHint name="residualValue" />
-                <ColumnHint name="branchId" />
-                <ColumnHint name="assignedTo" />
+                <ColumnHint name="Name *" required />
+                <ColumnHint name="Asset Tag *" required />
+                <ColumnHint name="Purchase Cost *" required />
+                <ColumnHint name="Serial Number" />
+                <ColumnHint name="Purchase Date" />
+                <ColumnHint name="Status" />
+                <ColumnHint name="Useful Life (Months)" />
+                <ColumnHint name="Branch ID or name" />
+                <ColumnHint name="Assigned To (user UUID)" />
               </div>
               <p className="text-xs text-slate-500 mt-3">
-                💡 Leave <span className="font-mono">branchId</span> and <span className="font-mono">assignedTo</span> empty if you don't have UUIDs yet — they'll be assigned later.
+                Leave Branch ID and Assigned To empty if you do not have those IDs yet.
               </p>
             </div>
           </div>
@@ -401,8 +439,15 @@ export default function ImportAssetsPage() {
               <h3 className="text-xl font-bold text-slate-900">Import complete</h3>
               <p className="text-sm text-slate-500 mt-1.5">
                 {result.inserted ?? 0} assets imported successfully
-                {(result.failed ?? 0) > 0 && ', ' + result.failed + ' failed'}
+                {(result.failed ?? 0) > 0 && `, ${result.failed} failed`}
+                {(result.totalRows ?? 0) > 0 && ` · ${result.totalRows} rows in file`}
               </p>
+              {(result.inserted ?? 0) === 0 && (result.failed ?? 0) === 0 && (
+                <p className="text-sm text-amber-700 mt-3 max-w-md mx-auto">
+                  No new rows were created. If you already imported this file, the tags already
+                  exist in this organisation. Open Assets to confirm.
+                </p>
+              )}
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">

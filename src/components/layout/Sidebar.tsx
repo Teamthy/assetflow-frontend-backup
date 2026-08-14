@@ -8,6 +8,7 @@ import {
   Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck, FileText, ClipboardCheck,
 } from 'lucide-react'
 import { isRbacEnforced } from '@/lib/access'
+import { LogoMark } from '@/components/brand/Logo'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/stores/auth'
 import { useUIStore } from '@/lib/stores/ui'
@@ -115,16 +116,9 @@ export function Sidebar() {
           sidebarCollapsed && 'lg:justify-center'
         )}>
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" />
-                <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" fillOpacity="0.6" />
-                <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" fillOpacity="0.6" />
-                <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" />
-              </svg>
-            </div>
+            <LogoMark className="h-7 w-7 flex-shrink-0" />
             <div className={cn('min-w-0', sidebarCollapsed && 'lg:hidden')}>
-              <span className="text-slate-900 font-bold text-sm tracking-tight block truncate">AssetFlow</span>
+              <span className="text-slate-900 font-semibold text-sm tracking-tight block truncate">AssetFlow</span>
               {organization?.name && (
                 <span className="text-slate-400 text-xs block truncate">{organization.name}</span>
               )}

@@ -268,7 +268,7 @@ export default function TeamPage() {
               <EmptyState
                 icon={Users}
                 title="No team members yet"
-                description="Invite your teammates to collaborate on asset management."
+                description="Invite people to this workspace."
                 action={<Button onClick={() => setInviteOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white"><UserPlus className="w-4 h-4" />Invite member</Button>}
               />
             ) : (
@@ -358,7 +358,7 @@ export default function TeamPage() {
               <EmptyState
                 icon={Mail}
                 title="No pending invitations"
-                description="Invite team members to join your organization."
+                description="Send an email invite."
                 action={<Button onClick={() => setInviteOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white"><UserPlus className="w-4 h-4" />Invite member</Button>}
               />
             ) : (
@@ -653,10 +653,8 @@ function InviteMemberModal({ open, onOpenChange, onInvited }: { open: boolean; o
       form.reset()
       onOpenChange(false)
     } catch (error: unknown) {
-      console.error('[InviteModal] Error sending invitation:', error)
-      const err = error as any
-      const message = err?.response?.data?.message || err?.message || 'Unable to send invitation right now'
-      toast.error(message)
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(err?.response?.data?.message || err?.message || 'Unable to send invitation right now')
     }
   }
 

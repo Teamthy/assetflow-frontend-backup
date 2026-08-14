@@ -1,12 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, sans-serif;
     --brand-50: #eff6ff;
     --brand-100: #dbeafe;
     --brand-500: #3b82f6;
