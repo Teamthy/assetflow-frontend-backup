@@ -36,7 +36,7 @@ export function RoleDashboard() {
     enabled: role === 'admin' || role === 'finance' || role === 'auditor' || role === 'asset_manager',
   })
   const audit = useQuery({ queryKey: ['reports', 'audit'], queryFn: reportsApi.audit })
-  const approvals = useQuery({ queryKey: ['approvals', 'pending'], queryFn: approvalsApi.listPending })
+  const approvals = useQuery({ queryKey: ['approvals', 'pending'], queryFn: () => approvalsApi.listPending() })
 
   const summary = (assets.data?.summary ?? {}) as Record<string, unknown>
   const maintenanceSummary = (maintenance.data?.summary ?? {}) as Record<string, unknown>

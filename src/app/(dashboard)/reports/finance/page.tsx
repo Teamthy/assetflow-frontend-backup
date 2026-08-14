@@ -127,7 +127,7 @@ export default function FinanceReportPage() {
                       <div key={String(row.method)} className="flex items-center justify-between">
                         <span className="text-sm text-slate-700 capitalize">{String(row.method ?? 'other')}</span>
                         <span className="text-sm font-semibold text-slate-900">
-                          {formatCurrency(row.totalProceeds)} · {asNumber(row.count)}
+                          {formatCurrency(asNumber(row.totalProceeds))} · {asNumber(row.count)}
                         </span>
                       </div>
                     ))}

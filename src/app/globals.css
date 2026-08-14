@@ -112,13 +112,17 @@
 }
 
 @media print {
-  aside, header, .print\\:hidden, button, nav {
+  aside,
+  header,
+  nav {
     display: none !important;
   }
+
   main {
     padding: 0 !important;
     margin: 0 !important;
   }
+
   body {
     background: white !important;
   }

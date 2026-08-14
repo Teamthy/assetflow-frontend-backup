@@ -37,7 +37,7 @@ export function useReportsSnapshot() {
   const audit = useAuditReport()
   const approvals = useQuery({
     queryKey: ['approvals', 'pending'],
-    queryFn: approvalsApi.listPending,
+    queryFn: () => approvalsApi.listPending(),
   })
   const campaigns = useQuery({
     queryKey: ['audit-campaigns'],
