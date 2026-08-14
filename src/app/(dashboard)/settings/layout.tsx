@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Building2, Landmark, Users, CreditCard, Bell, Shield,
+  Building2, Landmark, Users, CreditCard, Bell,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { isRbacEnforced } from '@/lib/access'
@@ -44,7 +44,7 @@ const navItems: NavItem[] = [
     label: 'Billing',
     href: '/settings/billing',
     icon: CreditCard,
-    description: 'Plan, seats, invoices',
+    description: 'Usage and starter limits',
     adminOnly: true,
   },
   {

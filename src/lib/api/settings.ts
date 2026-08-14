@@ -35,7 +35,10 @@ export const settingsApi = {
 
   reactivateMember: (userId: string) => usersApi.reactivate(userId),
 
-  removeMember: (userId: string) => apiClient.delete(`/users/${userId}`),
+  removeMember: (userId: string) => usersApi.remove(userId),
+
+  transferOwnership: (input: { newOwnerId: string; password: string }) =>
+    usersApi.transferOwnership(input),
 
   getPendingInvitations: async () => {
     const invites = await invitationsApi.listPending()

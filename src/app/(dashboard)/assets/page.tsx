@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Upload, Download, Search, Filter, X, Package,
   ChevronLeft, ChevronRight, MoreHorizontal, ArrowUpDown,
-  Eye, Edit, ArrowLeftRight, Trash2, TrendingDown, Wrench, CheckCircle2,
+  Eye, Edit, ArrowLeftRight, Trash2, TrendingDown, Wrench, CheckCircle2, QrCode,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,6 +21,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DisposeAssetModal } from '@/components/assets/DisposeAssetModal'
 import { BulkTransferDialog } from '@/components/assets/BulkTransferDialog'
 import { BulkDisposeDialog } from '@/components/assets/BulkDisposeDialog'
+import { BulkQrDialog } from '@/components/assets/BulkQrDialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -58,6 +59,7 @@ export default function AssetsPage() {
   const [bulkDisposeOpen, setBulkDisposeOpen] = useState(false)
   const [bulkStatus, setBulkStatus] = useState<'active' | 'maintenance' | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkQrOpen, setBulkQrOpen] = useState(false)
 
   const { data: branchResp } = useBranches()
   const branches = branchResp?.data ?? branchResp?.items ?? []
@@ -237,6 +239,12 @@ export default function AssetsPage() {
                 {selectedIds.length ? `Export ${selectedIds.length}` : 'Export'}
               </Button>
             </RoleGuard>
+            <Link href="/assets/scan">
+              <Button variant="outline">
+                <QrCode className="w-4 h-4" />
+                Scan
+              </Button>
+            </Link>
             <RoleGuard permission="assets.import">
               <Link href="/assets/import">
                 <Button variant="outline">
@@ -297,6 +305,10 @@ export default function AssetsPage() {
               Export
             </Button>
           </RoleGuard>
+          <Button size="sm" variant="outline" onClick={() => requireBulkSelection() && setBulkQrOpen(true)} className="bg-white">
+            <QrCode className="h-4 w-4" />
+            QR labels
+          </Button>
           <button
             type="button"
             onClick={() => clearSelection()}
@@ -561,6 +573,10 @@ export default function AssetsPage() {
                             <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id)}>
                               <Eye className="w-4 h-4 mr-2" />
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '?tab=qr')}>
+                              <QrCode className="w-4 h-4 mr-2" />
+                              QR label
                             </DropdownMenuItem>
                             <RoleGuard permission="assets.edit">
                               <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '/edit')}>

@@ -21,7 +21,6 @@ import {
 import {
   createAssetSchema,
   toOptionalNumber,
-  type CreateAssetFormInput,
   type CreateAssetFormValues,
 } from '@/lib/validations/asset'
 import { useCreateAsset } from '@/lib/hooks/useAssets'
@@ -37,10 +36,10 @@ export default function CreateAssetPage() {
   const branches = branchResp?.data ?? branchResp?.items ?? []
   const { data: members = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['users', 'picker'],
-    queryFn: usersApi.list,
+    queryFn: () => usersApi.list(),
   })
 
-  const form = useForm<CreateAssetFormInput, unknown, CreateAssetFormValues>({
+  const form = useForm<CreateAssetFormValues>({
     resolver: formResolver(createAssetSchema),
     defaultValues: {
       name: '',
@@ -451,3 +450,4 @@ function FormSection({
     </div>
   )
 }
+

@@ -1,6 +1,8 @@
 import apiClient from './client'
 import type {
   Asset,
+  AssetQrCode,
+  AssetScanResult,
   CreateAssetDto,
   UpdateAssetDto,
   AssetListParams,
@@ -10,6 +12,17 @@ import type {
   RestoreAssetDto,
   RecordDepreciationDto,
 } from '@/types'
+
+function unwrap<T>(response: unknown): T {
+  if (response && typeof response === 'object' && 'data' in response) {
+    const payload = (response as { data?: unknown }).data
+    if (payload && typeof payload === 'object' && 'data' in payload && 'success' in payload) {
+      return (payload as { data: T }).data
+    }
+    return payload as T
+  }
+  return response as T
+}
 
 export const assetApi = {
   list: async (params?: AssetListParams) => {
@@ -103,14 +116,25 @@ export const assetApi = {
     return response.data as Blob
   },
 
-  qr: async (id: string) => {
-    const response = await apiClient.get<{ success: boolean; data: unknown }>(`/assets/${id}/qr`)
-    return response.data.data
+  qr: async (id: string): Promise<AssetQrCode> => {
+    const response = await apiClient.get<unknown>(`/assets/${id}/qr`)
+    return unwrap<AssetQrCode>(response.data)
   },
 
-  scan: async (id: string) => {
-    const response = await apiClient.get<{ success: boolean; data: unknown }>(`/assets/${id}/scan`)
-    return response.data.data
+  scan: async (id: string): Promise<AssetScanResult> => {
+    const response = await apiClient.get<unknown>(`/assets/${id}/scan`)
+    return unwrap<AssetScanResult>(response.data)
+  },
+
+  bulkQr: async (assetIds: string[]): Promise<{
+    successful: AssetQrCode[]
+    failed: Array<{ assetId: string; reason: string }>
+  }> => {
+    const response = await apiClient.post<unknown>('/assets/qr/bulk', { assetIds })
+    return unwrap<{
+      successful: AssetQrCode[]
+      failed: Array<{ assetId: string; reason: string }>
+    }>(response.data)
   },
 
   import: async (file: File) => {

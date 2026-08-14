@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import {
   LayoutDashboard, Package, Building2, Wrench, BarChart3,
-  Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck, FileText, ClipboardCheck,
+  Bell, Settings, ChevronLeft, ChevronRight, X, ShieldCheck, FileText, ClipboardCheck, QrCode,
 } from 'lucide-react'
 import { isRbacEnforced } from '@/lib/access'
 import { LogoMark } from '@/components/brand/Logo'
@@ -37,6 +37,7 @@ const navSections: NavSection[] = [
     label: 'Operations',
     items: [
       { label: 'Assets', href: '/assets', icon: Package, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor', 'standard_staff'] },
+      { label: 'Scan', href: '/assets/scan', icon: QrCode, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor', 'standard_staff', 'maintenance_staff'] },
       { label: 'Branches', href: '/branches', icon: Building2, roles: ['admin', 'asset_manager', 'finance', 'branch_manager', 'auditor'] },
       { label: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['admin', 'asset_manager', 'branch_manager', 'maintenance_staff'] },
     ],
@@ -157,7 +158,9 @@ export function Sidebar() {
                     const Icon = item.icon
                     const isActive = item.href === '/dashboard'
                       ? pathname === '/dashboard'
-                      : pathname.startsWith(item.href)
+                      : item.href === '/assets'
+                        ? pathname.startsWith('/assets') && !pathname.startsWith('/assets/scan')
+                        : pathname.startsWith(item.href)
 
                     return (
                       <Link

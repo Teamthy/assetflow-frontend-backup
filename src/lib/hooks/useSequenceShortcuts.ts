@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 const SEQUENCES = [
   { sequence: "gd", route: "/dashboard" },
   { sequence: "ga", route: "/assets" },
+  { sequence: "gq", route: "/assets/scan" },
   { sequence: "gb", route: "/branches" },
   { sequence: "gm", route: "/maintenance" },
   { sequence: "gr", route: "/reports" },
