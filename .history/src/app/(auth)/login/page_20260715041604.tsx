@@ -1,0 +1,198 @@
+﻿'use client'
+
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ArrowRight, Building2, Eye, EyeOff, FileSpreadsheet, ShieldCheck, Users } from 'lucide-react'
+import { toast } from 'sonner'
+import { authApi } from '@/lib/api/auth'
+import { useAuthStore } from '@/lib/stores/auth'
+import type { UserRole, ApiError } from '@/types'
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+})
+
+type LoginForm = z.infer<typeof loginSchema>
+
+export default function LoginPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const reason = searchParams.get('reason')
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
+
+  const onSubmit = async (data: LoginForm) => {
+    setIsLoading(true)
+    try {
+      const response = await authApi.login(data)
+
+      // Response shape same as register:
+      // { success: true, data: { user, organization, accessToken } }
+      const responseData = response.data?.data ?? response.data
+
+      const user = responseData?.user
+      if (!user) throw new Error('User not found in response')
+
+      const organization = responseData?.organization
+      if (!organization) throw new Error('Organization not found in response')
+
+      const accessToken = responseData?.accessToken
+      if (!accessToken) throw new Error('Access token not found')
+
+      const refreshToken = responseData?.refreshToken ?? ''
+
+      const role: UserRole =
+        responseData?.member?.role ??
+        responseData?.role ??
+        'standard_staff'
+
+      const userWithFullName = {
+        ...user,
+        fullName: `${user.firstName} ${user.lastName}`,
+      }
+
+      setAuth({
+        user: userWithFullName,
+        organization,
+        accessToken,
+        refreshToken,
+        role,
+      })
+
+      const firstName = user.firstName ?? 'there'
+      toast.success(`Welcome back, ${firstName}!`)
+      router.push('/dashboard')
+
+    } catch (error: unknown) {
+      const err = error as ApiError
+      console.error('[Login] Error:', error)
+      toast.error(
+        err?.response?.data?.message ?? 'Invalid email or password'
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col lg:flex-row">
+        <div className="flex w-full flex-col justify-between bg-gradient-to-br from-slate-900 via-brand-900 to-brand-700 p-8 text-white lg:w-[46%] lg:p-10">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/90 backdrop-blur">
+              <Building2 className="h-4 w-4" />
+              AssetFlow Operations
+            </div>
+            <h1 className="mt-8 text-3xl font-semibold leading-tight sm:text-4xl">
+              Manage assets, approvals, and audits from one place.
+            </h1>
+            <p className="mt-4 max-w-md text-sm text-slate-200 sm:text-base">
+              Bring your register, assign roles, and keep every lifecycle step visible for finance, branches, and leadership.
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            {[
+              { icon: FileSpreadsheet, title: 'Import your register', detail: 'Bring in Excel data in minutes.' },
+              { icon: Users, title: 'Coordinate teams', detail: 'Assign branch managers and finance users.' },
+              { icon: ShieldCheck, title: 'Stay audit-ready', detail: 'Track approvals and asset history.' },
+            ].map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
+                  <div className="mt-0.5 rounded-xl bg-white/15 p-2">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="text-sm text-slate-300">{item.detail}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-6 py-10 lg:px-10">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)]">
+            <div className="mb-6 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-600">Welcome back</p>
+              <h2 className="mt-2 text-3xl font-semibold text-slate-900">Sign in to AssetFlow</h2>
+              <p className="mt-2 text-sm text-slate-500">Access your dashboard, approvals, and team workspace.</p>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+              {reason === 'session-expired' && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-left">
+                  <p className="text-xs font-medium text-amber-700">Your session has expired. Please sign in again.</p>
+                </div>
+              )}
+
+              <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-full border border-slate-200 bg-slate-50 pl-5">
+                <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M0 .55.571 0H15.43l.57.55v9.9l-.571.55H.57L0 10.45zm1.143 1.138V9.9h13.714V1.69l-6.503 4.8h-.697zM13.749 1.1H2.25L8 5.356z" fill="#6B7280"/>
+                </svg>
+                <input
+                  {...register('email')}
+                  type="email"
+                  placeholder="Email address"
+                  className="h-full w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                  required
+                />
+              </div>
+              {errors.email && <p className="mt-2 text-left text-xs text-red-500">{errors.email.message}</p>}
+
+              <div className="mt-4 flex h-12 w-full items-center gap-2 overflow-hidden rounded-full border border-slate-200 bg-slate-50 pl-5 pr-3">
+                <svg width="13" height="17" viewBox="0 0 13 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 8.5c0-.938-.729-1.7-1.625-1.7h-.812V4.25C10.563 1.907 8.74 0 6.5 0S2.438 1.907 2.438 4.25V6.8h-.813C.729 6.8 0 7.562 0 8.5v6.8c0 .938.729 1.7 1.625 1.7h9.75c.896 0 1.625-.762 1.625-1.7zM4.063 4.25c0-1.406 1.093-2.55 2.437-2.55s2.438 1.144 2.438 2.55V6.8H4.061z" fill="#6B7280"/>
+                </svg>
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  className="h-full flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                  required
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-sm font-medium text-slate-500">
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {errors.password && <p className="mt-2 text-left text-xs text-red-500">{errors.password.message}</p>}
+
+              <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
+                <label className="flex items-center gap-2">
+                  <input className="h-4 w-4 rounded border-slate-300" type="checkbox" id="checkbox" />
+                  Remember me
+                </label>
+                <Link className="font-medium text-brand-600 hover:text-brand-700" href="/forgot-password">Forgot password?</Link>
+              </div>
+
+              <button type="submit" disabled={isLoading} className="mt-7 flex h-11 items-center justify-center gap-2 rounded-full bg-brand-600 text-sm font-semibold text-white transition-opacity hover:bg-brand-700 disabled:opacity-60">
+                {isLoading ? 'Signing in...' : 'Login'}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-slate-500">
+              New to AssetFlow?{' '}
+              <Link className="font-semibold text-brand-600 hover:text-brand-700" href="/register">Create an account</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

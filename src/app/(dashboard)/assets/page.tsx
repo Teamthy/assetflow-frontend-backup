@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Upload, Download, Search, Filter, X, Package,
   ChevronLeft, ChevronRight, MoreHorizontal, ArrowUpDown,
-  Eye, Edit, ArrowLeftRight, Trash2, Copy, QrCode,
+  Eye, Edit, ArrowLeftRight, Trash2, TrendingDown, Wrench, CheckCircle2, QrCode,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,6 +18,10 @@ import { SearchInput } from '@/components/shared/SearchInput'
 import { UserAvatar } from '@/components/shared/UserAvatar'
 import { RoleGuard } from '@/components/shared/RoleGuard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { DisposeAssetModal } from '@/components/assets/DisposeAssetModal'
+import { BulkTransferDialog } from '@/components/assets/BulkTransferDialog'
+import { BulkDisposeDialog } from '@/components/assets/BulkDisposeDialog'
+import { BulkQrDialog } from '@/components/assets/BulkQrDialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -27,6 +31,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useAssets, useDeleteAsset } from '@/lib/hooks/useAssets'
+import { useBulkDelete, useBulkUpdateStatus } from '@/lib/hooks/useBulkAssets'
 import { useBranches } from '@/lib/hooks/useBranches'
 import { assetApi } from '@/lib/api/assets'
 import { formatCurrency } from '@/lib/utils/format'
@@ -48,7 +53,13 @@ export default function AssetsPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null)
-  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [assetToDispose, setAssetToDispose] = useState<Asset | null>(null)
+  const [selected, setSelected] = useState<Record<string, Asset>>({})
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false)
+  const [bulkDisposeOpen, setBulkDisposeOpen] = useState(false)
+  const [bulkStatus, setBulkStatus] = useState<'active' | 'maintenance' | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkQrOpen, setBulkQrOpen] = useState(false)
 
   const { data: branchResp } = useBranches()
   const branches = branchResp?.data ?? branchResp?.items ?? []
@@ -68,12 +79,17 @@ export default function AssetsPage() {
 
   const { data, isLoading, isFetching, error } = useAssets(params)
   const deleteAsset = useDeleteAsset()
+  const bulkDelete = useBulkDelete()
+  const bulkStatusUpdate = useBulkUpdateStatus()
 
   const assets = data?.data ?? data?.items ?? []
   const total = data?.pagination?.total ?? 0
   const totalPages = data?.pagination?.totalPages ?? 1
-  const selectedIds = Object.keys(selected).filter((id) => selected[id])
-  const allVisibleSelected = assets.length > 0 && assets.every((asset) => selected[asset.id])
+  const selectedAssets = Object.values(selected)
+  const selectedIds = selectedAssets.map((asset) => asset.id)
+  const transferableSelected = selectedAssets.filter((asset) => asset.status !== 'disposed')
+  const allVisibleSelected = assets.length > 0 && assets.every((asset) => Boolean(selected[asset.id]))
+  const overBulkLimit = selectedIds.length > 100
   const hasActiveFilters =
     statusFilter !== 'all' ||
     conditionFilter !== 'all' ||
@@ -112,18 +128,16 @@ export default function AssetsPage() {
   }
 
   function exportSelectedCsv() {
-    const rows = assets
-      .filter((asset) => selected[asset.id])
-      .map((asset) => ({
-        name: asset.name,
-        assetTag: asset.assetTag,
-        status: asset.status,
-        condition: asset.condition,
-        category: asset.category ?? '',
-        branch: asset.branch?.name ?? '',
-        purchaseCost: asset.purchaseCost ?? '',
-        treatment: asset.accountingTreatment ?? '',
-      }))
+    const rows = selectedAssets.map((asset) => ({
+      name: asset.name,
+      assetTag: asset.assetTag,
+      status: asset.status,
+      condition: asset.condition,
+      category: asset.category ?? '',
+      branch: asset.branch?.name ?? '',
+      purchaseCost: asset.purchaseCost ?? '',
+      treatment: asset.accountingTreatment ?? '',
+    }))
     if (rows.length === 0) {
       toast.error('Select at least one asset')
       return
@@ -136,6 +150,77 @@ export default function AssetsPage() {
     if (!assetToDelete) return
     await deleteAsset.mutateAsync(assetToDelete.id)
     setAssetToDelete(null)
+  }
+
+  function clearSelection(ids?: string[]) {
+    if (!ids) {
+      setSelected({})
+      return
+    }
+    setSelected((prev) => {
+      const next: Record<string, Asset> = { ...prev }
+      ids.forEach((id) => { delete next[id] })
+      return next
+    })
+  }
+
+  function requireBulkSelection() {
+    if (selectedIds.length === 0) {
+      toast.error('Select at least one asset')
+      return false
+    }
+    if (overBulkLimit) {
+      toast.error('Select at most 100 assets for a bulk action')
+      return false
+    }
+    return true
+  }
+
+  function openBulkTransfer() {
+    if (!requireBulkSelection()) return
+    if (transferableSelected.length === 0) {
+      toast.error('Disposed assets cannot be transferred')
+      return
+    }
+    setBulkTransferOpen(true)
+  }
+
+  function openBulkDispose() {
+    if (!requireBulkSelection()) return
+    if (transferableSelected.length === 0) {
+      toast.error('Disposed assets cannot be disposed again')
+      return
+    }
+    setBulkDisposeOpen(true)
+  }
+
+  async function handleBulkStatus() {
+    if (!bulkStatus || !requireBulkSelection()) return
+    try {
+      const result = await bulkStatusUpdate.mutateAsync({
+        assetIds: selectedIds,
+        status: bulkStatus,
+        reason: `Bulk status change to ${bulkStatus} from asset list`,
+      })
+      clearSelection(result.successful ?? [])
+      setBulkStatus(null)
+    } catch {
+      // toast from hook
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (!requireBulkSelection()) return
+    try {
+      const result = await bulkDelete.mutateAsync({
+        assetIds: selectedIds,
+        reason: 'Bulk delete from asset list',
+      })
+      clearSelection(result.successful ?? [])
+      setBulkDeleteOpen(false)
+    } catch {
+      // toast from hook
+    }
   }
 
   const showEmptyStateFirstTime = !isLoading && !hasActiveFilters && assets.length === 0
@@ -154,6 +239,12 @@ export default function AssetsPage() {
                 {selectedIds.length ? `Export ${selectedIds.length}` : 'Export'}
               </Button>
             </RoleGuard>
+            <Link href="/assets/scan">
+              <Button variant="outline">
+                <QrCode className="w-4 h-4" />
+                Scan
+              </Button>
+            </Link>
             <RoleGuard permission="assets.import">
               <Link href="/assets/import">
                 <Button variant="outline">
@@ -174,8 +265,61 @@ export default function AssetsPage() {
         }
       />
 
+      {selectedIds.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <span className="mr-2 text-sm font-semibold text-blue-900">
+            {selectedIds.length} selected
+            {overBulkLimit ? ' · max 100 per action' : ''}
+          </span>
+          <RoleGuard permission="assets.transfer">
+            <Button size="sm" variant="outline" onClick={openBulkTransfer} className="bg-white">
+              <ArrowLeftRight className="h-4 w-4" />
+              Transfer
+            </Button>
+          </RoleGuard>
+          <RoleGuard permission="assets.dispose">
+            <Button size="sm" variant="outline" onClick={openBulkDispose} className="bg-white">
+              <TrendingDown className="h-4 w-4" />
+              Dispose
+            </Button>
+          </RoleGuard>
+          <RoleGuard permission="assets.edit">
+            <Button size="sm" variant="outline" onClick={() => requireBulkSelection() && setBulkStatus('maintenance')} className="bg-white">
+              <Wrench className="h-4 w-4" />
+              Maintenance
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => requireBulkSelection() && setBulkStatus('active')} className="bg-white">
+              <CheckCircle2 className="h-4 w-4" />
+              Mark active
+            </Button>
+          </RoleGuard>
+          <RoleGuard permission="assets.delete">
+            <Button size="sm" variant="outline" onClick={() => requireBulkSelection() && setBulkDeleteOpen(true)} className="bg-white text-red-700">
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </RoleGuard>
+          <RoleGuard permission="assets.export">
+            <Button size="sm" variant="outline" onClick={exportSelectedCsv} className="bg-white">
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </RoleGuard>
+          <Button size="sm" variant="outline" onClick={() => requireBulkSelection() && setBulkQrOpen(true)} className="bg-white">
+            <QrCode className="h-4 w-4" />
+            QR labels
+          </Button>
+          <button
+            type="button"
+            onClick={() => clearSelection()}
+            className="ml-auto text-sm font-medium text-blue-800 hover:text-blue-950"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Filter bar */}
         <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex-1 min-w-[240px] max-w-md">
@@ -292,7 +436,6 @@ export default function AssetsPage() {
           )}
         </div>
 
-        {/* Table content */}
         {isLoading ? (
           <TableSkeleton rows={8} cols={6} />
         ) : error ? (
@@ -342,8 +485,11 @@ export default function AssetsPage() {
                       <Checkbox
                         checked={allVisibleSelected}
                         onCheckedChange={(checked) => {
-                          const next: Record<string, boolean> = { ...selected }
-                          assets.forEach((asset) => { next[asset.id] = Boolean(checked) })
+                          const next: Record<string, Asset> = { ...selected }
+                          assets.forEach((asset) => {
+                            if (checked) next[asset.id] = asset
+                            else delete next[asset.id]
+                          })
                           setSelected(next)
                         }}
                         aria-label="Select page"
@@ -370,7 +516,14 @@ export default function AssetsPage() {
                       <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={Boolean(selected[asset.id])}
-                          onCheckedChange={(checked) => setSelected((prev) => ({ ...prev, [asset.id]: Boolean(checked) }))}
+                          onCheckedChange={(checked) => {
+                            setSelected((prev) => {
+                              const next = { ...prev }
+                              if (checked) next[asset.id] = asset
+                              else delete next[asset.id]
+                              return next
+                            })
+                          }}
                           aria-label={`Select ${asset.assetTag}`}
                         />
                       </td>
@@ -421,6 +574,10 @@ export default function AssetsPage() {
                               <Eye className="w-4 h-4 mr-2" />
                               View
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '?tab=qr')}>
+                              <QrCode className="w-4 h-4 mr-2" />
+                              QR label
+                            </DropdownMenuItem>
                             <RoleGuard permission="assets.edit">
                               <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '/edit')}>
                                 <Edit className="w-4 h-4 mr-2" />
@@ -428,9 +585,21 @@ export default function AssetsPage() {
                               </DropdownMenuItem>
                             </RoleGuard>
                             <RoleGuard permission="assets.transfer">
-                              <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '/transfer')}>
+                              <DropdownMenuItem
+                                disabled={asset.status === 'disposed'}
+                                onClick={() => router.push('/assets/' + asset.id + '/transfer')}
+                              >
                                 <ArrowLeftRight className="w-4 h-4 mr-2" />
                                 Transfer
+                              </DropdownMenuItem>
+                            </RoleGuard>
+                            <RoleGuard permission="assets.dispose">
+                              <DropdownMenuItem
+                                disabled={asset.status === 'disposed'}
+                                onClick={() => setAssetToDispose(asset)}
+                              >
+                                <TrendingDown className="w-4 h-4 mr-2" />
+                                Dispose
                               </DropdownMenuItem>
                             </RoleGuard>
                             <RoleGuard permission="assets.delete">
@@ -452,7 +621,6 @@ export default function AssetsPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-4">
                 <div className="text-sm text-slate-500">
@@ -511,6 +679,50 @@ export default function AssetsPage() {
         isLoading={deleteAsset.isPending}
         onConfirm={handleDelete}
       />
+
+      {assetToDispose && (
+        <DisposeAssetModal
+          asset={assetToDispose}
+          open={Boolean(assetToDispose)}
+          onOpenChange={(open) => { if (!open) setAssetToDispose(null) }}
+        />
+      )}
+
+      <BulkTransferDialog
+        open={bulkTransferOpen}
+        onOpenChange={setBulkTransferOpen}
+        assetIds={transferableSelected.map((asset) => asset.id)}
+        onDone={clearSelection}
+      />
+
+      <BulkDisposeDialog
+        open={bulkDisposeOpen}
+        onOpenChange={setBulkDisposeOpen}
+        assets={transferableSelected}
+        onDone={clearSelection}
+      />
+
+      <ConfirmDialog
+        open={Boolean(bulkStatus)}
+        onOpenChange={(open) => !open && setBulkStatus(null)}
+        title={bulkStatus === 'maintenance' ? 'Mark as maintenance' : 'Mark as active'}
+        description={`Update status for ${selectedIds.length} selected asset${selectedIds.length === 1 ? '' : 's'}. Disposed assets will be skipped.`}
+        confirmLabel={bulkStatus === 'maintenance' ? 'Set maintenance' : 'Set active'}
+        variant="default"
+        isLoading={bulkStatusUpdate.isPending}
+        onConfirm={handleBulkStatus}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={`Delete ${selectedIds.length} asset${selectedIds.length === 1 ? '' : 's'}`}
+        description="This moves the selected assets to the deleted state. You can restore them later from the audit view. Disposed assets will be skipped."
+        confirmLabel="Delete selected"
+        variant="destructive"
+        isLoading={bulkDelete.isPending}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   )
 }
@@ -538,4 +750,3 @@ function SortableHeader({ label, column, sortBy, sortOrder, onToggle, align = 'l
     </th>
   )
 }
-

@@ -1,11 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import {
-  ArrowLeft, TrendingDown, DollarSign, Package,
-  Download, PieChart, BarChart2,
+  ArrowLeft, TrendingDown, DollarSign, Package, Download, PieChart, BarChart2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -14,207 +11,75 @@ import { StatCard } from '@/components/shared/StatCard'
 import { StatCardSkeleton } from '@/components/shared/LoadingSkeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
-import { useAssets } from '@/lib/hooks/useAssets'
 import { assetApi } from '@/lib/api/assets'
-import { reportsApi } from '@/lib/api/reports'
+import { downloadBlob } from '@/lib/utils/download'
 import { formatCurrency, formatNumber } from '@/lib/utils/format'
-import { cn } from '@/lib/utils'
+import { useReportsSnapshot } from '@/lib/hooks/useReports'
+import { asNumber, asRecord } from '@/lib/reports/helpers'
 
 export default function FinanceReportPage() {
-  const { data: allAssets, isLoading } = useAssets({ limit: 1000 })
-  const { data: disposedAssets } = useAssets({ status: 'disposed', limit: 1000 })
-  const { data: financeReport } = useQuery({ queryKey: ['reports', 'finance'], queryFn: reportsApi.finance })
-
-  const stats = useMemo(() => {
-    const items = allAssets?.data ?? allAssets?.items ?? []
-    const disposed = disposedAssets?.data ?? disposedAssets?.items ?? []
-
-    const capitalized = items.filter((a) => a.accountingTreatment === 'capitalized')
-    const capitalizedValue = capitalized.reduce((sum, a) => sum + (a.purchaseCost ?? 0), 0)
-
-    const totalAssetValue = items.reduce((sum, a) => sum + (a.purchaseCost ?? 0), 0)
-    const residualTotal = items.reduce((sum, a) => sum + (a.residualValue ?? 0), 0)
-
-    const disposalProceeds = Number(
-      (financeReport as { disposals?: { totalProceeds?: string } } | undefined)?.disposals?.totalProceeds ?? 0
-    )
-
-    // Group by category
-    const categoryBreakdown: Record<string, { count: number; value: number }> = {}
-    items.forEach((a) => {
-      const cat = a.category ?? 'Uncategorized'
-      if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { count: 0, value: 0 }
-      categoryBreakdown[cat].count += 1
-      categoryBreakdown[cat].value += a.purchaseCost ?? 0
-    })
-
-    const topCategories = Object.entries(categoryBreakdown)
-      .sort((a, b) => b[1].value - a[1].value)
-      .slice(0, 6)
-
-    // Treatment distribution
-    const treatmentCount: Record<string, number> = {}
-    items.forEach((a) => {
-      const t = a.accountingTreatment ?? 'unknown'
-      treatmentCount[t] = (treatmentCount[t] ?? 0) + 1
-    })
-
-    return {
-      totalAssetValue,
-      capitalizedCount: capitalized.length,
-      capitalizedValue,
-      residualTotal,
-      disposedCount: disposed.length,
-      disposalProceeds,
-      topCategories,
-      treatmentCount,
-      totalCount: items.length,
-    }
-  }, [allAssets, disposedAssets])
+  const snap = useReportsSnapshot()
+  const finance = snap.finance
+  const empty = !snap.isLoading && snap.assets.total === 0
 
   async function handleExport() {
     try {
-      const blob = await assetApi.export({})
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'finance-report-' + new Date().toISOString().split('T')[0] + '.xlsx'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
+      const blob = await assetApi.export({ limit: 500 })
+      downloadBlob(blob, `finance-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
       toast.success('Report downloaded')
     } catch {
       toast.error('Export failed')
     }
   }
 
+  const treatmentRows = [
+    ['capitalized', 'Capitalized'],
+    ['expensed', 'Expensed'],
+    ['trackedNonCapitalized', 'Tracked non-capitalized'],
+    ['pendingReview', 'Pending review'],
+  ] as const
+
   return (
     <div className="max-w-6xl mx-auto">
-      <Link href="/reports" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 mb-4">
+      <Link href="/reports" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 mb-4 print:hidden">
         <ArrowLeft className="w-4 h-4" />
         Back to reports
       </Link>
 
       <PageHeader
         title="Finance dashboard"
-        description="Capitalized value, depreciation, and disposal figures"
+        description="Capitalized value, depreciation, and disposal proceeds from the API"
         actions={
-          <Button onClick={handleExport} variant="outline">
+          <Button onClick={handleExport} variant="outline" className="print:hidden">
             <Download className="w-4 h-4" />
             Export
           </Button>
         }
       />
 
-      {isLoading ? (
+      {snap.isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-          <StatCardSkeleton />
+          <StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton /><StatCardSkeleton />
         </div>
-      ) : stats.totalCount === 0 ? (
+      ) : empty ? (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
           <EmptyState
             icon={DollarSign}
             title="No financial data yet"
-            description="Once you add assets with purchase costs, financial insights will appear here."
-            action={
-              <Link href="/assets/new">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Add first asset
-                </Button>
-              </Link>
-            }
+            description="Add assets with a purchase cost."
+            action={<Link href="/assets/new"><Button className="bg-blue-600 text-white">Add asset</Button></Link>}
           />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard
-              title="Total asset value"
-              value={formatCurrency(stats.totalAssetValue)}
-              icon={DollarSign}
-              iconColor="text-blue-600"
-              iconBg="bg-blue-50"
-            />
-            <StatCard
-              title="Capitalized value"
-              value={formatCurrency(stats.capitalizedValue)}
-              icon={Package}
-              iconColor="text-purple-600"
-              iconBg="bg-purple-50"
-              trend={{
-                value: formatNumber(stats.capitalizedCount) + ' assets',
-                positive: true,
-              }}
-            />
-            <StatCard
-              title="Residual value"
-              value={formatCurrency(stats.residualTotal)}
-              icon={TrendingDown}
-              iconColor="text-emerald-600"
-              iconBg="bg-emerald-50"
-            />
-            <StatCard
-              title="Disposal proceeds"
-              value={formatCurrency(stats.disposalProceeds)}
-              icon={DollarSign}
-              iconColor="text-slate-600"
-              iconBg="bg-slate-100"
-              trend={{
-                value: formatNumber(stats.disposedCount) + ' disposed',
-                positive: true,
-              }}
-            />
+            <StatCard title="Active value" value={formatCurrency(snap.assets.totalActiveValue)} icon={DollarSign} iconColor="text-blue-600" iconBg="bg-blue-50" />
+            <StatCard title="Capitalized value" value={formatCurrency(finance.capitalizedValue)} icon={Package} iconColor="text-purple-600" iconBg="bg-purple-50" trend={{ value: `${formatNumber(finance.capitalizedCount)} assets` }} />
+            <StatCard title="Accumulated dep." value={formatCurrency(finance.accumulated)} icon={TrendingDown} iconColor="text-emerald-600" iconBg="bg-emerald-50" trend={{ value: `${finance.coveragePercent}% coverage` }} />
+            <StatCard title="Disposal proceeds" value={formatCurrency(finance.disposalProceeds)} icon={DollarSign} iconColor="text-slate-600" iconBg="bg-slate-100" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top categories by value */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <BarChart2 className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">Top categories by value</h3>
-                  <p className="text-sm text-slate-500 mt-0.5">Where your capital is invested</p>
-                </div>
-              </div>
-              <div className="p-6">
-                {stats.topCategories.length === 0 ? (
-                  <div className="text-sm text-slate-400 text-center py-4">No category data</div>
-                ) : (
-                  <div className="space-y-3">
-                    {stats.topCategories.map(([category, data]) => {
-                      const pct = stats.totalAssetValue > 0 ? (data.value / stats.totalAssetValue) * 100 : 0
-                      return (
-                        <div key={category}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm text-slate-700 truncate">{category}</span>
-                              <span className="text-xs text-slate-400 flex-shrink-0">({data.count})</span>
-                            </div>
-                            <span className="text-sm font-semibold text-slate-900 flex-shrink-0">
-                              {formatCurrency(data.value)}
-                            </span>
-                          </div>
-                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 transition-all"
-                              style={{ width: Math.max(pct, 2) + '%' }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Treatment breakdown */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -222,38 +87,54 @@ export default function FinanceReportPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-slate-900">Accounting treatment</h3>
-                  <p className="text-sm text-slate-500 mt-0.5">Distribution across your register</p>
+                  <p className="text-sm text-slate-500 mt-0.5">Same source as /reports/finance</p>
+                </div>
+              </div>
+              <div className="p-6 space-y-3">
+                {treatmentRows.map(([key, label]) => {
+                  const row = asRecord(finance.treatment[key])
+                  const count = asNumber(row.count)
+                  const value = asNumber(row.totalValue)
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{label}</p>
+                        <p className="text-xs text-slate-500">{formatNumber(count)} assets</p>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-900">{formatCurrency(value)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Disposals</h3>
+                  <p className="text-sm text-slate-500 mt-0.5">Proceeds by method</p>
                 </div>
               </div>
               <div className="p-6">
-                <div className="space-y-3">
-                  {Object.entries(stats.treatmentCount).map(([key, count]) => {
-                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-                    const pct = stats.totalCount > 0 ? Math.round((count / stats.totalCount) * 100) : 0
-                    const colorMap: Record<string, { bar: string; text: string }> = {
-                      capitalized: { bar: 'bg-purple-500', text: 'text-purple-700' },
-                      expensed: { bar: 'bg-slate-400', text: 'text-slate-600' },
-                      tracked_non_capitalized: { bar: 'bg-blue-500', text: 'text-blue-700' },
-                      pending_review: { bar: 'bg-amber-500', text: 'text-amber-700' },
-                    }
-                    const colors = colorMap[key] ?? { bar: 'bg-slate-400', text: 'text-slate-600' }
-                    return (
-                      <div key={key}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm text-slate-700">{label}</span>
-                          <span className={cn('text-sm font-semibold', colors.text)}>
-                            {count} ({pct}%)
-                          </span>
-                        </div>
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={cn('h-full transition-all', colors.bar)}
-                            style={{ width: (pct || 2) + '%' }}
-                          />
-                        </div>
+                {finance.disposalsByMethod.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">No disposals recorded</p>
+                ) : (
+                  <div className="space-y-3">
+                    {finance.disposalsByMethod.map((row) => (
+                      <div key={String(row.method)} className="flex items-center justify-between">
+                        <span className="text-sm text-slate-700 capitalize">{String(row.method ?? 'other')}</span>
+                        <span className="text-sm font-semibold text-slate-900">
+                          {formatCurrency(asNumber(row.totalProceeds))} · {asNumber(row.count)}
+                        </span>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  This year charge {formatCurrency(finance.yearCharge)} · {formatNumber(finance.depreciable)} depreciable assets
                 </div>
               </div>
             </div>

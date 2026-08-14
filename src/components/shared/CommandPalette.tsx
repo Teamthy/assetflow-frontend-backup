@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
   Search, Package, Building2, Wrench, LayoutDashboard,
-  BarChart3, Settings, Bell, User, Plus, Upload, ArrowRight,
+  BarChart3, Settings, Bell, User, Plus, Upload, ArrowRight, QrCode,
 } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { assetApi } from '@/lib/api/assets'
@@ -29,6 +29,7 @@ interface Props { open: boolean; onOpenChange: (open: boolean) => void }
 const NAV_COMMANDS: CommandItem[] = [
   { id: 'nav-dashboard', label: 'Dashboard', description: 'Overview and metrics', icon: LayoutDashboard, href: '/dashboard', group: 'navigate' },
   { id: 'nav-assets', label: 'Assets', description: 'Asset register', icon: Package, href: '/assets', group: 'navigate' },
+  { id: 'nav-scan', label: 'Scan asset', description: 'Look up a QR label or asset tag', icon: QrCode, href: '/assets/scan', group: 'navigate' },
   { id: 'nav-branches', label: 'Branches', description: 'Organization locations', icon: Building2, href: '/branches', group: 'navigate' },
   { id: 'nav-maintenance', label: 'Maintenance', description: 'Tasks and schedules', icon: Wrench, href: '/maintenance', group: 'navigate' },
   { id: 'nav-reports', label: 'Reports', description: 'Analytics and exports', icon: BarChart3, href: '/reports', group: 'navigate' },

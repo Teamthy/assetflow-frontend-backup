@@ -1,0 +1,468 @@
+﻿'use client'
+
+import { useState, useMemo } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  Plus, Upload, Download, Search, Filter, X, Package,
+  ChevronLeft, ChevronRight, MoreHorizontal, ArrowUpDown,
+  Eye, Edit, ArrowLeftRight, Trash2,
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+import { PageHeader } from '@/components/shared/PageHeader'
+import { StatusBadge, ConditionBadge, TreatmentBadge } from '@/components/shared/StatusBadge'
+import { TableSkeleton } from '@/components/shared/LoadingSkeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SearchInput } from '@/components/shared/SearchInput'
+import { UserAvatar } from '@/components/shared/UserAvatar'
+import { RoleGuard } from '@/components/shared/RoleGuard'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { useAssets, useDeleteAsset } from '@/lib/hooks/useAssets'
+import { useBranches } from '@/lib/hooks/useBranches'
+import { assetApi } from '@/lib/api/assets'
+import { formatCurrency, formatDate } from '@/lib/utils/format'
+import type { Asset, AssetStatus, AssetCondition } from '@/types'
+
+export default function AssetsPage() {
+  const router = useRouter()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [conditionFilter, setConditionFilter] = useState<string>('all')
+  const [branchFilter, setBranchFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [sortBy, setSortBy] = useState<string>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [showFilters, setShowFilters] = useState(false)
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null)
+
+  const { data: branchResp } = useBranches()
+  const branches = branchResp?.data ?? branchResp?.items ?? []
+
+  const params = useMemo(() => ({
+    page,
+    limit: pageSize,
+    search: search || undefined,
+    status: statusFilter !== 'all' ? (statusFilter as AssetStatus) : undefined,
+    condition: conditionFilter !== 'all' ? (conditionFilter as AssetCondition) : undefined,
+    branchId: branchFilter !== 'all' ? branchFilter : undefined,
+    sortBy,
+    sortOrder,
+  }), [page, pageSize, search, statusFilter, conditionFilter, branchFilter, sortBy, sortOrder])
+
+  const { data, isLoading, isFetching, error } = useAssets(params)
+  const deleteAsset = useDeleteAsset()
+
+  const assets = data?.data ?? data?.items ?? []
+  const total = data?.pagination?.total ?? 0
+  const totalPages = data?.pagination?.totalPages ?? 1
+  const hasActiveFilters = statusFilter !== 'all' || conditionFilter !== 'all' || branchFilter !== 'all' || search !== ''
+
+  function clearFilters() {
+    setSearch('')
+    setStatusFilter('all')
+    setConditionFilter('all')
+    setBranchFilter('all')
+    setPage(1)
+  }
+
+  function toggleSort(column: string) {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(column)
+      setSortOrder('asc')
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const blob = await assetApi.export(params)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'assets-' + new Date().toISOString().split('T')[0] + '.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      toast.success('Export downloaded')
+    } catch {
+      toast.error('Export failed')
+    }
+  }
+
+  async function handleDelete() {
+    if (!assetToDelete) return
+    await deleteAsset.mutateAsync(assetToDelete.id)
+    setAssetToDelete(null)
+  }
+
+  const showEmptyStateFirstTime = !isLoading && !hasActiveFilters && assets.length === 0
+  const showNoResults = !isLoading && hasActiveFilters && assets.length === 0
+
+  return (
+    <div className="max-w-[1600px] mx-auto">
+      <PageHeader
+        title="Assets"
+        description={total > 0 ? total + ' assets in your register' : 'Manage your fixed asset register'}
+        actions={
+          <div className="flex gap-2">
+            <RoleGuard permission="assets.export">
+              <Button variant="outline" onClick={handleExport} disabled={assets.length === 0}>
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            </RoleGuard>
+            <RoleGuard permission="assets.import">
+              <Link href="/assets/import">
+                <Button variant="outline">
+                  <Upload className="w-4 h-4" />
+                  Import
+                </Button>
+              </Link>
+            </RoleGuard>
+            <RoleGuard permission="assets.create">
+              <Link href="/assets/new">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Plus className="w-4 h-4" />
+                  Add asset
+                </Button>
+              </Link>
+            </RoleGuard>
+          </div>
+        }
+      />
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Filter bar */}
+        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex-1 min-w-[240px] max-w-md">
+              <SearchInput
+                value={search}
+                onChange={(v) => { setSearch(v); setPage(1) }}
+                placeholder="Search by name, tag, serial..."
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters || hasActiveFilters ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                  {[statusFilter !== 'all', conditionFilter !== 'all', branchFilter !== 'all'].filter(Boolean).length + (search ? 1 : 0)}
+                </span>
+              )}
+            </Button>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
+
+            <div className="ml-auto text-xs text-slate-500">
+              {isFetching && !isLoading && <span>Updating...</span>}
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="mt-3 pt-3 border-t border-slate-200 flex flex-wrap gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">Status</label>
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+                  <SelectTrigger className="w-40 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="disposed">Disposed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">Condition</label>
+                <Select value={conditionFilter} onValueChange={(v) => { setConditionFilter(v); setPage(1) }}>
+                  <SelectTrigger className="w-40 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All conditions</SelectItem>
+                    <SelectItem value="excellent">Excellent</SelectItem>
+                    <SelectItem value="good">Good</SelectItem>
+                    <SelectItem value="fair">Fair</SelectItem>
+                    <SelectItem value="poor">Poor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {branches && branches.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-500">Branch</label>
+                  <Select value={branchFilter} onValueChange={(v) => { setBranchFilter(v); setPage(1) }}>
+                    <SelectTrigger className="w-56 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All branches</SelectItem>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Table content */}
+        {isLoading ? (
+          <TableSkeleton rows={8} cols={6} />
+        ) : error ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-red-600">Failed to load assets. Please refresh.</p>
+          </div>
+        ) : showEmptyStateFirstTime ? (
+          <EmptyState
+            icon={Package}
+            title="No assets yet"
+            description="Start by adding your first asset or importing your existing register from Excel."
+            action={
+              <div className="flex gap-2">
+                <RoleGuard permission="assets.import">
+                  <Link href="/assets/import">
+                    <Button variant="outline">
+                      <Upload className="w-4 h-4" />
+                      Import Excel
+                    </Button>
+                  </Link>
+                </RoleGuard>
+                <RoleGuard permission="assets.create">
+                  <Link href="/assets/new">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Plus className="w-4 h-4" />
+                      Add first asset
+                    </Button>
+                  </Link>
+                </RoleGuard>
+              </div>
+            }
+          />
+        ) : showNoResults ? (
+          <EmptyState
+            icon={Search}
+            title="No matching assets"
+            description="Try adjusting your filters or search query."
+            action={<Button variant="outline" onClick={clearFilters}>Clear filters</Button>}
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <SortableHeader label="Asset" column="name" sortBy={sortBy} sortOrder={sortOrder} onToggle={toggleSort} />
+                    <SortableHeader label="Tag" column="assetTag" sortBy={sortBy} sortOrder={sortOrder} onToggle={toggleSort} />
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Status</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Condition</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Branch</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Assigned</th>
+                    <SortableHeader label="Cost" column="purchaseCost" sortBy={sortBy} sortOrder={sortOrder} onToggle={toggleSort} align="right" />
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3">Treatment</th>
+                    <th className="w-10 px-6 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {assets.map((asset) => (
+                    <tr
+                      key={asset.id}
+                      onClick={() => router.push('/assets/' + asset.id)}
+                      className="hover:bg-slate-50/70 transition-colors duration-100 group cursor-pointer"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Package className="w-4 h-4 text-slate-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 truncate">{asset.name}</div>
+                            {asset.category && (
+                              <div className="text-xs text-slate-500 truncate">{asset.category}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-mono">{asset.assetTag}</td>
+                      <td className="px-6 py-4"><StatusBadge status={asset.status} /></td>
+                      <td className="px-6 py-4"><ConditionBadge condition={asset.condition} /></td>
+                      <td className="px-6 py-4 text-sm text-slate-700">
+                        {asset.branch?.name ?? '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {asset.assignedUser ? (
+                          <div className="flex items-center gap-2">
+                            <UserAvatar name={asset.assignedUser.fullName} size="sm" />
+                            <span className="text-sm text-slate-700 truncate max-w-[120px]">
+                              {asset.assignedUser.fullName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-900 font-medium text-right">
+                        {asset.purchaseCost ? formatCurrency(asset.purchaseCost) : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {asset.accountingTreatment && <TreatmentBadge treatment={asset.accountingTreatment} />}
+                      </td>
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-200 rounded-md">
+                            <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <RoleGuard permission="assets.edit">
+                              <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '/edit')}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            </RoleGuard>
+                            <RoleGuard permission="assets.transfer">
+                              <DropdownMenuItem onClick={() => router.push('/assets/' + asset.id + '/transfer')}>
+                                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                Transfer
+                              </DropdownMenuItem>
+                            </RoleGuard>
+                            <RoleGuard permission="assets.delete">
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                onClick={() => setAssetToDelete(asset)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </RoleGuard>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-slate-500">
+                  Showing <span className="font-medium text-slate-700">{(page - 1) * pageSize + 1}</span> to{' '}
+                  <span className="font-medium text-slate-700">{Math.min(page * pageSize, total)}</span> of{' '}
+                  <span className="font-medium text-slate-700">{total}</span>
+                </div>
+                <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(Number(v)); setPage(1) }}>
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="px-3 text-sm text-slate-500">
+                  Page {page} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(assetToDelete)}
+        onOpenChange={(open) => !open && setAssetToDelete(null)}
+        title={'Delete ' + (assetToDelete?.name ?? 'asset')}
+        description="This will move the asset to the deleted state. You can restore it later from the audit view."
+        confirmLabel="Delete asset"
+        variant="destructive"
+        isLoading={deleteAsset.isPending}
+        onConfirm={handleDelete}
+      />
+    </div>
+  )
+}
+
+interface SortableHeaderProps {
+  label: string
+  column: string
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+  onToggle: (col: string) => void
+  align?: 'left' | 'right'
+}
+
+function SortableHeader({ label, column, sortBy, sortOrder, onToggle, align = 'left' }: SortableHeaderProps) {
+  const isActive = sortBy === column
+  return (
+    <th className={'px-6 py-3 ' + (align === 'right' ? 'text-right' : 'text-left')}>
+      <button
+        onClick={() => onToggle(column)}
+        className={'inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ' + (isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700')}
+      >
+        {label}
+        <ArrowUpDown className={'w-3 h-3 ' + (isActive ? 'opacity-100' : 'opacity-40')} />
+      </button>
+    </th>
+  )
+}
+

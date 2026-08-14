@@ -38,11 +38,31 @@ export interface Organization {
   rcNumber?: string
   address?: string
   isMultiBranch?: boolean
+  ownerUserId?: string
   capitalizationThreshold?: number
   disposalApprovalThreshold?: number
   minimumUsefulLifeMonths?: number
   fiscalYearEndMonth?: number
   defaultDepreciationMethod?: DepreciationMethod
+}
+
+export interface AssetQrCode {
+  assetId: string
+  assetTag: string
+  qrCodeDataUrl: string
+  qrCodeUrl: string
+}
+
+export interface AssetScanResult {
+  id: string
+  name: string
+  assetTag: string
+  status: string
+  condition: string
+  category: string | null
+  assignedTo: string | null
+  branchId: string | null
+  qrCodeUrl: string | null
 }
 
 export interface Branch {

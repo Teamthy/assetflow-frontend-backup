@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -8,6 +8,7 @@ import { SettingsSection } from '@/components/shared/SettingsSection'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { notificationPreferencesApi, type NotificationPreference } from '@/lib/api/notification-preferences'
+import { getApiErrorMessage } from '@/lib/api/errors'
 
 const defaultPrefs: NotificationPreference[] = [
   { key: 'asset_assigned', label: 'Asset assigned to me', description: 'When an asset is assigned to you', inApp: true, email: true },
@@ -25,6 +26,12 @@ export default function NotificationPreferencesPage() {
   const [prefs, setPrefs] = useState<NotificationPreference[]>(defaultPrefs)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const latestPrefs = useRef(prefs)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    latestPrefs.current = prefs
+  }, [prefs])
 
   useEffect(() => {
     async function loadPrefs() {
@@ -41,28 +48,33 @@ export default function NotificationPreferencesPage() {
     }
 
     loadPrefs()
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+    }
   }, [])
 
-  function toggle(key: string, channel: 'inApp' | 'email') {
-    setPrefs((prev) =>
-      prev.map((p) =>
-        p.key === key ? { ...p, [channel]: !p[channel] } : p
-      )
-    )
-    // Autosave semantic
-    toast.success('Preferences updated', { duration: 1500 })
-  }
-
-  async function saveAll() {
+  async function persist(next: NotificationPreference[], silent = false) {
     setSaving(true)
     try {
-      await notificationPreferencesApi.update(prefs)
-      toast.success('Preferences updated')
-    } catch {
-      toast.error('Failed to update notification preferences')
+      const saved = await notificationPreferencesApi.update(next)
+      if (saved.length > 0) setPrefs(saved)
+      if (!silent) toast.success('Preferences saved')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to update notification preferences'))
     } finally {
       setSaving(false)
     }
+  }
+
+  function toggle(key: string, channel: 'inApp' | 'email') {
+    const next = prefs.map((pref) =>
+      pref.key === key ? { ...pref, [channel]: !pref[channel] } : pref
+    )
+    setPrefs(next)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      void persist(latestPrefs.current, true)
+    }, 400)
   }
 
   return (
@@ -110,11 +122,11 @@ export default function NotificationPreferencesPage() {
 
         <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-100">
           <p className="text-xs text-slate-500">
-            Changes save automatically. Email delivery requires a verified sender address.
+            {saving ? 'Saving…' : 'Changes save automatically. Email delivery requires a verified sender address.'}
           </p>
           <Button
             variant="outline"
-            onClick={saveAll}
+            onClick={() => void persist(prefs)}
             disabled={saving}
           >
             {saving ? (

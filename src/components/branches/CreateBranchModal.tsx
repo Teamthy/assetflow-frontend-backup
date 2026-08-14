@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { Building2, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ export function CreateBranchModal({ open, onOpenChange }: CreateBranchModalProps
   const createMutation = useCreateBranch()
 
   const form = useForm<BranchFormValues>({
-    resolver: zodResolver(branchSchema),
+    resolver: formResolver(branchSchema),
     defaultValues: { name: '', code: '', description: '' },
   })
 

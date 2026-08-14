@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   Users, UserPlus, Mail, Loader2, MoreHorizontal, Shield,
-  Ban, Trash2, RefreshCw,
+  Ban, Trash2, RefreshCw, Crown, UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuthStore } from '@/lib/stores/auth'
 import { settingsApi } from '@/lib/api/settings'
+import { getApiErrorMessage } from '@/lib/api/errors'
 import { formatDate } from '@/lib/utils/format'
 
 const inviteSchema = z.object({
@@ -77,6 +78,7 @@ type TeamMember = {
   joinedAt?: string
   status?: string
   isCurrentUser?: boolean
+  isOwner?: boolean
 }
 
 type PendingInvite = {
@@ -100,9 +102,14 @@ export default function TeamPage() {
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null)
   const [removeConfirm, setRemoveConfirm] = useState('')
   const [cancelInviteTarget, setCancelInviteTarget] = useState<PendingInvite | null>(null)
+  const [reactivateTarget, setReactivateTarget] = useState<TeamMember | null>(null)
+  const [ownershipOpen, setOwnershipOpen] = useState(false)
+  const [newOwnerId, setNewOwnerId] = useState('')
+  const [ownershipPassword, setOwnershipPassword] = useState('')
   const [submittingAction, setSubmittingAction] = useState<string | null>(null)
   const user = useAuthStore((s) => s.user)
   const role = useAuthStore((s) => s.role)
+  const organization = useAuthStore((s) => s.organization)
 
   useEffect(() => {
     let mounted = true
@@ -114,7 +121,11 @@ export default function TeamPage() {
           settingsApi.getPendingInvitations(),
         ])
 
-        const normalizedMembers = normalizeMembers(membersResponse?.data?.data ?? membersResponse?.data ?? membersResponse)
+        const normalizedMembers = normalizeMembers(
+          membersResponse?.data?.data ?? membersResponse?.data ?? membersResponse,
+          user?.id,
+          organization?.ownerUserId,
+        )
         const normalizedInvites = normalizeInvites(invitesResponse?.data?.data ?? invitesResponse?.data ?? invitesResponse)
 
         if (!mounted) return
@@ -205,6 +216,43 @@ export default function TeamPage() {
     }
   }
 
+  async function handleReactivateMember() {
+    if (!reactivateTarget) return
+
+    setSubmittingAction(`reactivate:${reactivateTarget.id}`)
+    try {
+      await settingsApi.reactivateMember(reactivateTarget.id)
+      setActiveMembers((prev) => prev.map((member) => (member.id === reactivateTarget.id ? { ...member, status: 'active' } : member)))
+      toast.success(`${reactivateTarget.fullName} reactivated`)
+      setReactivateTarget(null)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to reactivate user right now'))
+    } finally {
+      setSubmittingAction(null)
+    }
+  }
+
+  async function handleTransferOwnership() {
+    if (!newOwnerId || !ownershipPassword) return
+
+    setSubmittingAction('ownership')
+    try {
+      await settingsApi.transferOwnership({ newOwnerId, password: ownershipPassword })
+      setActiveMembers((prev) => prev.map((member) => ({
+        ...member,
+        isOwner: member.id === newOwnerId,
+      })))
+      toast.success('Ownership transferred')
+      setOwnershipOpen(false)
+      setNewOwnerId('')
+      setOwnershipPassword('')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to transfer ownership right now'))
+    } finally {
+      setSubmittingAction(null)
+    }
+  }
+
   async function handleCancelInvitation() {
     if (!cancelInviteTarget) return
 
@@ -228,13 +276,21 @@ export default function TeamPage() {
           <h2 className="text-xl font-bold text-slate-900">Team members</h2>
           <p className="text-sm text-slate-500 mt-1">{loading ? 'Loading team details…' : `${activeMembers.length} active, ${pendingInvites.length} pending`}</p>
         </div>
-        <Button
-          onClick={() => setInviteOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <UserPlus className="w-4 h-4" />
-          Invite member
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {(activeMembers.some((member) => member.isCurrentUser && member.isOwner) || role === 'admin') && (
+            <Button variant="outline" onClick={() => setOwnershipOpen(true)}>
+              <Crown className="w-4 h-4" />
+              Transfer ownership
+            </Button>
+          )}
+          <Button
+            onClick={() => setInviteOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <UserPlus className="w-4 h-4" />
+            Invite member
+          </Button>
+        </div>
       </div>
 
       {pendingInvites.length > 0 && (
@@ -268,7 +324,7 @@ export default function TeamPage() {
               <EmptyState
                 icon={Users}
                 title="No team members yet"
-                description="Invite your teammates to collaborate on asset management."
+                description="Invite people to this workspace."
                 action={<Button onClick={() => setInviteOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white"><UserPlus className="w-4 h-4" />Invite member</Button>}
               />
             ) : (
@@ -295,6 +351,9 @@ export default function TeamPage() {
                                 {member.isCurrentUser && (
                                   <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">You</span>
                                 )}
+                                {member.isOwner && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-medium">Owner</span>
+                                )}
                               </div>
                               <div className="text-xs text-slate-500">{member.email}</div>
                             </div>
@@ -320,24 +379,38 @@ export default function TeamPage() {
                                 <MoreHorizontal className="w-4 h-4 text-slate-500" />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setRoleDraft(member.role)
-                                  setRoleTarget(member)
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setRoleDraft(member.role)
+                                    setRoleTarget(member)
+                                  }}
+                                  disabled={member.isOwner}
+                                >
                                   <Shield className="w-4 h-4 mr-2" />
                                   Change role
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setSuspendTarget(member)} disabled={member.status === 'suspended'}>
-                                  <Ban className="w-4 h-4 mr-2" />
-                                  {member.status === 'suspended' ? 'Suspended' : 'Suspend'}
-                                </DropdownMenuItem>
+                                {member.status === 'suspended' ? (
+                                  <DropdownMenuItem onClick={() => setReactivateTarget(member)}>
+                                    <UserCheck className="w-4 h-4 mr-2" />
+                                    Reactivate
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => setSuspendTarget(member)} disabled={member.isOwner}>
+                                    <Ban className="w-4 h-4 mr-2" />
+                                    Suspend
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50" onClick={() => {
-                                  setRemoveTarget(member)
-                                  setRemoveConfirm('')
-                                }}>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                  disabled={member.isOwner}
+                                  onClick={() => {
+                                    setRemoveTarget(member)
+                                    setRemoveConfirm('')
+                                  }}
+                                >
                                   <Trash2 className="w-4 h-4 mr-2" />
-                                  Remove
+                                  {member.isOwner ? 'Transfer ownership first' : 'Remove'}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -358,7 +431,7 @@ export default function TeamPage() {
               <EmptyState
                 icon={Mail}
                 title="No pending invitations"
-                description="Invite team members to join your organization."
+                description="Send an email invite."
                 action={<Button onClick={() => setInviteOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white"><UserPlus className="w-4 h-4" />Invite member</Button>}
               />
             ) : (
@@ -512,6 +585,72 @@ export default function TeamPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!reactivateTarget} onOpenChange={(open) => { if (!open) setReactivateTarget(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reactivate member</DialogTitle>
+            <DialogDescription>Restore access for {reactivateTarget?.fullName ?? 'this member'}.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setReactivateTarget(null)}>Cancel</Button>
+            <Button type="button" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleReactivateMember} disabled={submittingAction === `reactivate:${reactivateTarget?.id}`}>
+              {submittingAction === `reactivate:${reactivateTarget?.id}` ? 'Reactivating…' : 'Reactivate member'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={ownershipOpen} onOpenChange={(open) => {
+        if (!open) {
+          setOwnershipOpen(false)
+          setNewOwnerId('')
+          setOwnershipPassword('')
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer ownership</DialogTitle>
+            <DialogDescription>
+              The new owner becomes admin. Confirm with your password. This cannot be undone from this screen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-1 py-2 space-y-3">
+            <Select value={newOwnerId} onValueChange={setNewOwnerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select the new owner" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeMembers
+                  .filter((member) => !member.isCurrentUser && member.status !== 'suspended')
+                  .map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.fullName} ({member.email})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="password"
+              value={ownershipPassword}
+              onChange={(e) => setOwnershipPassword(e.target.value)}
+              placeholder="Your password"
+              autoComplete="current-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOwnershipOpen(false)}>Cancel</Button>
+            <Button
+              type="button"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={handleTransferOwnership}
+              disabled={!newOwnerId || !ownershipPassword || submittingAction === 'ownership'}
+            >
+              {submittingAction === 'ownership' ? 'Transferring…' : 'Transfer ownership'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!cancelInviteTarget} onOpenChange={(open) => { if (!open) setCancelInviteTarget(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -530,7 +669,7 @@ export default function TeamPage() {
   )
 }
 
-function normalizeMembers(input: unknown): TeamMember[] {
+function normalizeMembers(input: unknown, currentUserId?: string, ownerUserId?: string): TeamMember[] {
   const items = Array.isArray(input)
     ? input
     : Array.isArray((input as { data?: unknown })?.data)
@@ -547,8 +686,9 @@ function normalizeMembers(input: unknown): TeamMember[] {
       (([getString(member, 'firstName'), getString(member, 'lastName')].filter(Boolean).join(' ') || getString(nestedUser, 'fullName') || getString(nestedUser, 'firstName') || getString(member, 'email') || 'Team member'))
     )
 
+    const id = String(getString(member, 'id') ?? getString(member, 'userId') ?? getString(nestedUser, 'id') ?? `${index}`)
     return {
-      id: String(getString(member, 'id') ?? getString(member, 'userId') ?? getString(nestedUser, 'id') ?? `${index}`),
+      id,
       fullName,
       email: String(getString(member, 'email') ?? getString(nestedUser, 'email') ?? ''),
       role: String(
@@ -561,7 +701,16 @@ function normalizeMembers(input: unknown): TeamMember[] {
       ),
       joinedAt: getString(member, 'joinedAt') ?? getString(member, 'createdAt') ?? undefined,
       status: getString(member, 'status') ?? undefined,
-      isCurrentUser: Boolean(getBoolean(member, 'isCurrentUser') ?? getBoolean(nestedUser, 'isCurrentUser') ?? false),
+      isCurrentUser: Boolean(
+        getBoolean(member, 'isCurrentUser') ??
+        getBoolean(nestedUser, 'isCurrentUser') ??
+        (currentUserId ? id === currentUserId : false)
+      ),
+      isOwner: Boolean(
+        getBoolean(member, 'isOwner') ??
+        getBoolean(nestedUser, 'isOwner') ??
+        (ownerUserId ? id === ownerUserId : false)
+      ),
     }
   }).filter((member) => member.email || member.id)
 }
@@ -608,10 +757,11 @@ function getFallbackMembers(user: { id: string; firstName?: string; lastName?: s
     id: user.id,
     fullName: user.fullName ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
     email: user.email,
-    role: role ?? 'primary_admin',
+    role: role ?? 'admin',
     joinedAt: user.createdAt,
     status: 'active',
     isCurrentUser: true,
+    isOwner: true,
   }]
 }
 
@@ -635,7 +785,7 @@ function isInvitationExpired(expiresAt?: string): boolean {
 
 function InviteMemberModal({ open, onOpenChange, onInvited }: { open: boolean; onOpenChange: (o: boolean) => void; onInvited: (invite: PendingInvite) => void }) {
   const form = useForm<InviteFormValues>({
-    resolver: zodResolver(inviteSchema),
+    resolver: formResolver(inviteSchema),
     defaultValues: { email: '', role: 'standard_staff' },
   })
 
@@ -653,10 +803,8 @@ function InviteMemberModal({ open, onOpenChange, onInvited }: { open: boolean; o
       form.reset()
       onOpenChange(false)
     } catch (error: unknown) {
-      console.error('[InviteModal] Error sending invitation:', error)
-      const err = error as any
-      const message = err?.response?.data?.message || err?.message || 'Unable to send invitation right now'
-      toast.error(message)
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(err?.response?.data?.message || err?.message || 'Unable to send invitation right now')
     }
   }
 

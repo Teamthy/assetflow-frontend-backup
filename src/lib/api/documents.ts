@@ -51,7 +51,7 @@ export const documentsApi = {
     form.append('category', input.category)
     if (input.description) form.append('description', input.description)
     const response = await apiClient.post('/documents', form, {
-      headers: { 'Content-Type': undefined },
+      timeout: 120000,
     })
     return unwrap<DocumentRecord>(response.data)
   },

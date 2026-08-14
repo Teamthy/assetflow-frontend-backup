@@ -11,7 +11,7 @@ import { MaintenanceDashboard } from '@/components/dashboard/MaintenanceDashboar
 import { AuditorDashboard } from '@/components/dashboard/AuditorDashboard'
 import { StandardStaffDashboard } from '@/components/dashboard/StandardStaffDashboard'
 import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner'
-import { X, Rocket, Building2, Upload, Users, ArrowRight } from 'lucide-react'
+import { X, Building2, Upload, Users, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { UserRole } from '@/types'
 
@@ -27,10 +27,10 @@ const dashboardMap: Record<UserRole, React.ComponentType> = {
 
 function WelcomeBanner({ orgName, onDismiss, role, source }: { orgName: string; onDismiss: () => void; role: UserRole; source?: string }) {
   const isInviteFlow = source === 'invite'
-  const title = isInviteFlow ? 'Your access is ready' : `${orgName} is live on AssetFlow!`
+  const title = orgName
   const subtitle = isInviteFlow
-    ? 'Your invitation is accepted and your workspace is ready for you.'
-    : 'Your account is set up and ready. Here is what to do next to get the most out of AssetFlow.'
+    ? 'Invitation accepted. You can start work now.'
+    : 'Add branches, import the register, or invite colleagues.'
 
   const actions = isInviteFlow
     ? [
@@ -83,44 +83,37 @@ function WelcomeBanner({ orgName, onDismiss, role, source }: { orgName: string; 
   const roleLabel = role === 'standard_staff' ? 'Staff member' : role === 'admin' ? 'Admin' : 'Team member'
 
   return (
-    <div className="mb-6 bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-6 text-white relative overflow-hidden animate-fade-in">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
-      <div className="absolute bottom-0 right-24 w-32 h-32 bg-white/5 rounded-full translate-y-16" />
-
+    <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 relative">
       <button
         onClick={onDismiss}
-        className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+        className="absolute top-3 right-3 p-1.5 hover:bg-slate-100 rounded-lg text-slate-400"
       >
-        <X className="w-4 h-4 text-white/70" />
+        <X className="w-4 h-4" />
       </button>
 
-      <div className="relative">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <Rocket className="w-4 h-4" />
-          </div>
-          <span className="text-sm font-semibold text-white/80">{isInviteFlow ? 'Welcome aboard' : 'Getting started'}</span>
-        </div>
-
-        <h2 className="text-2xl font-bold mb-1">{title}</h2>
-        <p className="text-white/70 mb-4 max-w-lg">{subtitle}</p>
-        <p className="text-sm text-white/70 mb-5">You are signed in as {roleLabel}.</p>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-1">
+          {isInviteFlow ? 'Invitation accepted' : 'Setup'}
+        </p>
+        <h2 className="text-lg font-semibold text-slate-900 mb-1">{title}</h2>
+        <p className="text-sm text-slate-500 mb-1">{subtitle}</p>
+        <p className="text-sm text-slate-500 mb-4">Signed in as {roleLabel}.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {actions.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 p-3.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all group"
+              className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50"
             >
-              <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <item.icon className="w-4.5 h-4.5" />
+              <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <item.icon className="w-4 h-4 text-slate-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold">{item.label}</p>
-                <p className="text-xs text-white/60">{item.cta}</p>
+                <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                <p className="text-xs text-slate-500">{item.cta}</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-white/60 ml-auto" />
+              <ArrowRight className="w-4 h-4 text-slate-300 ml-auto" />
             </Link>
           ))}
         </div>

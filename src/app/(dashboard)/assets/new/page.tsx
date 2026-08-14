@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { ArrowLeft, Loader2, Package, MapPin, DollarSign, Settings2 } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -18,7 +18,11 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { createAssetSchema, type CreateAssetFormValues } from '@/lib/validations/asset'
+import {
+  createAssetSchema,
+  toOptionalNumber,
+  type CreateAssetFormValues,
+} from '@/lib/validations/asset'
 import { useCreateAsset } from '@/lib/hooks/useAssets'
 import { useBranches } from '@/lib/hooks/useBranches'
 import { usersApi } from '@/lib/api/users'
@@ -32,11 +36,11 @@ export default function CreateAssetPage() {
   const branches = branchResp?.data ?? branchResp?.items ?? []
   const { data: members = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['users', 'picker'],
-    queryFn: usersApi.list,
+    queryFn: () => usersApi.list(),
   })
 
   const form = useForm<CreateAssetFormValues>({
-    resolver: zodResolver(createAssetSchema),
+    resolver: formResolver(createAssetSchema),
     defaultValues: {
       name: '',
       description: '',
@@ -63,7 +67,7 @@ export default function CreateAssetPage() {
       assetTag: values.assetTag,
       status: values.status as AssetStatus,
       condition: values.condition as AssetCondition,
-      purchaseCost: Number(values.purchaseCost),
+      purchaseCost: toOptionalNumber(values.purchaseCost) ?? 0,
     }
 
     if (values.description?.trim()) payload.description = values.description
@@ -75,10 +79,12 @@ export default function CreateAssetPage() {
     if (values.assignedTo?.trim()) payload.assignedTo = values.assignedTo
     if (values.purchaseDate?.trim()) payload.purchaseDate = values.purchaseDate
     if (values.warrantyExpiryDate?.trim()) payload.warrantyExpiryDate = values.warrantyExpiryDate
-    if (values.expectedUsefulLifeMonths !== undefined && values.expectedUsefulLifeMonths > 0) {
-      payload.expectedUsefulLifeMonths = values.expectedUsefulLifeMonths
+    const usefulLife = toOptionalNumber(values.expectedUsefulLifeMonths)
+    if (usefulLife !== undefined && usefulLife > 0) {
+      payload.expectedUsefulLifeMonths = usefulLife
     }
-    if (values.residualValue !== undefined) payload.residualValue = values.residualValue
+    const residual = toOptionalNumber(values.residualValue)
+    if (residual !== undefined) payload.residualValue = residual
     if (values.hasFutureEconomicBenefit !== undefined) payload.hasFutureEconomicBenefit = values.hasFutureEconomicBenefit
     if (values.costCanBeReliablyMeasured !== undefined) payload.costCanBeReliablyMeasured = values.costCanBeReliablyMeasured
 
@@ -379,8 +385,8 @@ export default function CreateAssetPage() {
           <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <RecognitionPreview
               input={{
-                purchaseCost: watchedValues.purchaseCost,
-                expectedUsefulLifeMonths: watchedValues.expectedUsefulLifeMonths,
+                purchaseCost: toOptionalNumber(watchedValues.purchaseCost),
+                expectedUsefulLifeMonths: toOptionalNumber(watchedValues.expectedUsefulLifeMonths),
                 hasFutureEconomicBenefit: watchedValues.hasFutureEconomicBenefit,
                 costCanBeReliablyMeasured: watchedValues.costCanBeReliablyMeasured,
               }}

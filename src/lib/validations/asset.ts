@@ -7,35 +7,11 @@ export const disposalMethodEnum = z.enum([
 ])
 export const depreciationMethodEnum = z.enum(['straight_line', 'reducing_balance'])
 
-const emptyToUndefined = (value: unknown) => {
-  if (value === '' || value === null || value === undefined) return undefined
-  return value
-}
-
-const requiredMoney = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number({
-  required_error: 'Purchase cost is required',
-  invalid_type_error: 'Purchase cost is required',
-}).min(0, 'Purchase cost cannot be negative'))
-
-const optionalMoney = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number().min(0).optional())
-
-const optionalMonths = z.preprocess((value) => {
-  const next = emptyToUndefined(value)
-  if (next === undefined) return undefined
-  const numeric = typeof next === 'number' ? next : Number(next)
-  return Number.isFinite(numeric) ? numeric : next
-}, z.number().int().min(0).optional())
-
+/**
+ * No preprocess / coerce / default here.
+ * Those make Zod input !== output and break `useForm<Values>({ resolver: formResolver(schema) })` on Vercel.
+ * Number inputs already call Number() in onChange. Defaults live on the form.
+ */
 export const createAssetSchema = z.object({
   name: z.string().min(2, 'Asset name is required').max(200),
   description: z.string().max(1000).optional().or(z.literal('')),
@@ -46,13 +22,16 @@ export const createAssetSchema = z.object({
   model: z.string().max(100).optional().or(z.literal('')),
   branchId: z.string().optional().or(z.literal('')),
   assignedTo: z.string().optional().or(z.literal('')),
-  status: assetStatusEnum.optional().default('active'),
-  condition: assetConditionEnum.optional().default('good'),
-  purchaseCost: requiredMoney,
+  status: assetStatusEnum,
+  condition: assetConditionEnum,
+  purchaseCost: z.number({
+    required_error: 'Purchase cost is required',
+    invalid_type_error: 'Purchase cost is required',
+  }).min(0, 'Purchase cost cannot be negative'),
   purchaseDate: z.string().optional().or(z.literal('')),
   warrantyExpiryDate: z.string().optional().or(z.literal('')),
-  expectedUsefulLifeMonths: optionalMonths,
-  residualValue: optionalMoney,
+  expectedUsefulLifeMonths: z.number().int().min(0).optional(),
+  residualValue: z.number().min(0).optional(),
   isDepreciable: z.boolean().optional(),
   hasFutureEconomicBenefit: z.boolean().optional(),
   costCanBeReliablyMeasured: z.boolean().optional(),
@@ -66,7 +45,6 @@ export const createAssetSchema = z.object({
   }
   if (
     value.residualValue !== undefined &&
-    typeof value.purchaseCost === 'number' &&
     value.residualValue > value.purchaseCost
   ) {
     ctx.addIssue({
@@ -76,7 +54,15 @@ export const createAssetSchema = z.object({
     })
   }
 })
-export type CreateAssetFormValues = z.input<typeof createAssetSchema>
+
+export type CreateAssetFormValues = z.infer<typeof createAssetSchema>
+export type CreateAssetFormInput = CreateAssetFormValues
+
+export function toOptionalNumber(value: unknown): number | undefined {
+  if (value === '' || value === null || value === undefined) return undefined
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
 
 export const transferAssetSchema = z.object({
   toBranchId: z.string().optional().or(z.literal('')),
@@ -86,33 +72,33 @@ export const transferAssetSchema = z.object({
   (d) => Boolean(d.toBranchId?.trim() || d.toUserId?.trim()),
   { message: 'Select a new branch or new assignee', path: ['toBranchId'] },
 )
-export type TransferAssetFormValues = z.input<typeof transferAssetSchema>
+export type TransferAssetFormValues = z.infer<typeof transferAssetSchema>
 
 export const disposeAssetSchema = z.object({
   method: disposalMethodEnum,
   reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
-  proceeds: z.coerce.number().min(0).default(0),
+  proceeds: z.coerce.number().min(0),
   disposedAt: z.string().min(1, 'Disposal date is required'),
   approvedByUserId: z.string().optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),
 })
-export type DisposeAssetFormValues = z.input<typeof disposeAssetSchema>
+export type DisposeAssetFormValues = z.infer<typeof disposeAssetSchema>
 
 export const restoreAssetSchema = z.object({
   reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
-  targetStatus: z.enum(['active', 'maintenance']).default('active'),
+  targetStatus: z.enum(['active', 'maintenance']),
   status: z.enum(['active', 'maintenance']).optional(),
 })
-export type RestoreAssetFormValues = z.input<typeof restoreAssetSchema>
+export type RestoreAssetFormValues = z.infer<typeof restoreAssetSchema>
 
 export const recordDepreciationSchema = z.object({
   fiscalYear: z.coerce.number().int().min(1900).max(2100),
-  depreciationMethod: depreciationMethodEnum.default('straight_line'),
-  periodUsedPriorYears: z.coerce.number().min(0).default(0),
-  periodUsedCurrentYear: z.coerce.number().min(0).max(12, 'Current year cannot exceed 12 months').default(12),
-  accumulatedDepreciationBf: z.coerce.number().min(0).default(0),
-  yearlyDepCharge: z.coerce.number().min(0).default(0),
-  totalAccumulatedDepreciation: z.coerce.number().min(0).default(0),
+  depreciationMethod: depreciationMethodEnum,
+  periodUsedPriorYears: z.coerce.number().min(0),
+  periodUsedCurrentYear: z.coerce.number().min(0).max(12, 'Current year cannot exceed 12 months'),
+  accumulatedDepreciationBf: z.coerce.number().min(0),
+  yearlyDepCharge: z.coerce.number().min(0),
+  totalAccumulatedDepreciation: z.coerce.number().min(0),
   runDate: z.string().min(1, 'Run date is required'),
 })
-export type RecordDepreciationFormValues = z.input<typeof recordDepreciationSchema>
+export type RecordDepreciationFormValues = z.infer<typeof recordDepreciationSchema>

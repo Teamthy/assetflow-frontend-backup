@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   Loader2, ArrowLeft, Mail, KeyRound, CheckCircle2, AlertCircle,
@@ -51,17 +51,17 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
 
   const emailForm = useForm<EmailForm>({
-    resolver: zodResolver(emailSchema),
+    resolver: formResolver(emailSchema),
     defaultValues: { email: '' },
   })
 
   const otpForm = useForm<OtpForm>({
-    resolver: zodResolver(otpSchema),
+    resolver: formResolver(otpSchema),
     defaultValues: { token: '' },
   })
 
   const passwordForm = useForm<PasswordForm>({
-    resolver: zodResolver(passwordSchema),
+    resolver: formResolver(passwordSchema),
     defaultValues: { newPassword: '', confirmPassword: '' },
   })
 

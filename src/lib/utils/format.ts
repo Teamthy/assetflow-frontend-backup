@@ -10,21 +10,22 @@ function safeParseISO(s: string | undefined | null): Date | null {
   }
 }
 
-export function formatCurrency(
-  amount: number | undefined | null,
-  currency = 'NGN'
-): string {
-  if (amount == null) return '—'
+export function formatCurrency(amount: unknown, currency = 'NGN'): string {
+  if (amount == null || amount === '') return '—'
+  const numeric = typeof amount === 'number' ? amount : Number(amount)
+  if (!Number.isFinite(numeric)) return '—'
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(numeric)
 }
 
-export function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-NG').format(value)
+export function formatNumber(value: unknown): string {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) return '0'
+  return new Intl.NumberFormat('en-NG').format(numeric)
 }
 
 export function formatDate(s: string | undefined | null): string {

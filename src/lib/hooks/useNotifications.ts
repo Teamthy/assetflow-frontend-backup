@@ -58,11 +58,38 @@ export function useNotifications(params?: { page?: number; limit?: number; unrea
   })
 }
 
+function unreadCountFrom(result: unknown): number {
+  let current: unknown = result
+  for (let i = 0; i < 3; i += 1) {
+    if (!current || typeof current !== 'object') return 0
+    const record = current as {
+      pagination?: { unreadCount?: number; total?: number }
+      unreadCount?: number
+      data?: unknown
+      items?: Notification[]
+    }
+    if (typeof record.unreadCount === 'number') return record.unreadCount
+    if (typeof record.pagination?.unreadCount === 'number') return record.pagination.unreadCount
+    if (Array.isArray(record.items)) return record.items.filter((item) => !item.isRead).length
+    if (Array.isArray(record.data)) return (record.data as Notification[]).filter((item) => !item.isRead).length
+    if (record.data && typeof record.data === 'object') {
+      current = record.data
+      continue
+    }
+    if (typeof record.pagination?.total === 'number') return record.pagination.total
+    return 0
+  }
+  return 0
+}
+
 export function useUnreadNotifications() {
   return useQuery({
     queryKey: notificationKeys.unread(),
-    queryFn: () => notificationApi.list({ unreadOnly: true, limit: 20 }),
-    refetchInterval: 60000, // poll every minute
+    queryFn: async () => {
+      const result = await notificationApi.list({ unreadOnly: true, limit: 20 })
+      return { count: unreadCountFrom(result) }
+    },
+    refetchInterval: 60000,
   })
 }
 

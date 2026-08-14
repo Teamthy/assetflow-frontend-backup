@@ -30,7 +30,7 @@ export function StepOrgProfile({ onNext, onSkip }: { onNext: () => void; onSkip:
       <div>
         <h2 className="text-2xl font-semibold text-[var(--neutral-900)]">Confirm your organization</h2>
         <p className="mt-2 text-sm text-[var(--neutral-500)]">
-          We use this to personalize your experience and format your reports correctly.
+          Shown on reports and the organization profile.
         </p>
       </div>
       <div className="space-y-3">

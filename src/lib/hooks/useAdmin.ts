@@ -210,6 +210,7 @@ export function useDecideDisposal(approvalId: string) {
     onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: approvalsKeys.all })
       qc.invalidateQueries({ queryKey: ['assets'] })
+      qc.invalidateQueries({ queryKey: ['reports'] })
       const label = variables.decision === 'approved' ? 'approved' : 'rejected'
       toast.success('Disposal ' + label)
     },
@@ -224,6 +225,7 @@ export function useDecideTransfer(approvalId: string) {
     onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: approvalsKeys.all })
       qc.invalidateQueries({ queryKey: ['assets'] })
+      qc.invalidateQueries({ queryKey: ['reports'] })
       const label = variables.decision === 'approved' ? 'approved' : 'rejected'
       toast.success('Transfer ' + label)
     },

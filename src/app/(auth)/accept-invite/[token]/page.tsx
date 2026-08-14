@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   Loader2, AlertCircle, UserPlus, Building2,
@@ -62,7 +62,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
   const [accepting, setAccepting] = useState(false)
 
   const form = useForm<AcceptForm>({
-    resolver: zodResolver(acceptSchema),
+    resolver: formResolver(acceptSchema),
     defaultValues: { firstName: '', lastName: '', password: '', confirmPassword: '' },
   })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { ArrowLeftRight, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -36,7 +36,7 @@ export function TransferAssetForm({ asset, onSuccess, onCancel, submitLabel = 'T
   const currentBranchId = asset.branch?.id ?? ''
 
   const form = useForm<TransferAssetFormValues>({
-    resolver: zodResolver(transferAssetSchema),
+    resolver: formResolver(transferAssetSchema),
     defaultValues: { toBranchId: '', toUserId: '', reason: '' },
   })
 

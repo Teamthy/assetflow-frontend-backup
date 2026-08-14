@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { z } from 'zod'
 import {
   User, Lock, Building2, Loader2, LogOut, ShieldAlert,
@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const [logoutAllLoading, setLogoutAllLoading] = useState(false)
 
   const profileForm = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
+    resolver: formResolver(profileSchema),
     defaultValues: {
       firstName: user?.firstName ?? user?.fullName?.split(' ')[0] ?? '',
       lastName: user?.lastName ?? user?.fullName?.split(' ').slice(1).join(' ') ?? '',
@@ -74,7 +74,7 @@ export default function ProfilePage() {
   })
 
   const passwordForm = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+    resolver: formResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   })
 

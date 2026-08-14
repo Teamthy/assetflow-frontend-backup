@@ -10,6 +10,7 @@ export interface OrgMember {
   roles: Array<{ id: string; name: string }>
   joinedAt: string
   lastActiveAt?: string
+  isOwner?: boolean
 }
 
 export interface OrgRole {
@@ -66,5 +67,13 @@ export const usersApi = {
 
   reactivate: async (userId: string): Promise<void> => {
     await apiClient.patch('/users/' + userId + '/reactivate')
+  },
+
+  remove: async (userId: string): Promise<void> => {
+    await apiClient.delete('/users/' + userId)
+  },
+
+  transferOwnership: async (input: { newOwnerId: string; password: string }): Promise<void> => {
+    await apiClient.post('/users/transfer-ownership', input)
   },
 }

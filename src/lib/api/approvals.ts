@@ -57,8 +57,10 @@ function normalizeList<T>(data: unknown): T[] {
 }
 
 export const approvalsApi = {
-  listPending: async (): Promise<Approval[]> => {
-    const r = await apiClient.get<unknown>('/approvals')
+  listPending: async (params?: { status?: string; type?: string }): Promise<Approval[]> => {
+    const r = await apiClient.get<unknown>('/approvals', {
+      params: { status: params?.status ?? 'all', type: params?.type },
+    })
     return normalizeList<Approval>(unwrap<unknown>(r.data))
   },
 

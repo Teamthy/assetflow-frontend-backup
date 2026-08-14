@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { formResolver } from '@/lib/validations/form-resolver'
 import { TrendingDown, Loader2, AlertTriangle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -49,7 +49,7 @@ export function DisposeAssetModal({ asset, open, onOpenChange }: Props) {
   const submitting = disposeMutation.isPending || requestApproval.isPending
 
   const form = useForm<DisposeAssetFormValues>({
-    resolver: zodResolver(disposeAssetSchema),
+    resolver: formResolver(disposeAssetSchema),
     defaultValues: {
       method: 'sold',
       reason: '',
