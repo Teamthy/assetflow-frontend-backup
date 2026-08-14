@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, X, Loader2, ShieldCheck, Clock3 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,14 +20,17 @@ export default function ApprovalsPage() {
     const [typeFilter, setTypeFilter] = useState<'all' | 'disposal' | 'transfer'>('all')
     const [note, setNote] = useState('')
 
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'all' | 'approved' | 'rejected'>('pending')
+
     const pending = useMemo(
         () => approvals.filter((approval) => {
-            if (approval.status !== 'pending') return false
+            if (statusFilter !== 'all' && approval.status !== statusFilter) return false
             const kind = approval.requestType ?? approval.type
             return typeFilter === 'all' || kind === typeFilter
         }),
-        [approvals, typeFilter],
+        [approvals, typeFilter, statusFilter],
     )
+    const queueCount = approvals.filter((item) => item.status === 'pending').length
 
     async function handleDecision(approval: { id: string; requestType?: string; type?: string }, decision: 'approved' | 'rejected') {
         setDecisioningId(approval.id)
@@ -101,7 +105,7 @@ export default function ApprovalsPage() {
                     <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
                         <ShieldCheck className="h-5 w-5 text-slate-500" />
                     </div>
-                    <p>No pending approvals.</p>
+                    <p>{statusFilter === 'pending' ? 'No pending approvals.' : 'No approvals in this view.'}</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -126,12 +130,15 @@ export default function ApprovalsPage() {
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
+                                    {approval.status !== 'pending' ? (
+                                        <span className="text-xs capitalize text-slate-500">{approval.status}</span>
+                                    ) : null}
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         className="border-red-200 text-red-700 hover:bg-red-50"
                                         onClick={() => handleDecision(approval, 'rejected')}
-                                        disabled={decisioningId === approval.id}
+                                        disabled={decisioningId === approval.id || approval.status !== 'pending'}
                                     >
                                         {decisioningId === approval.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
                                         Reject
@@ -140,7 +147,7 @@ export default function ApprovalsPage() {
                                         size="sm"
                                         className="bg-green-600 hover:bg-green-700"
                                         onClick={() => handleDecision(approval, 'approved')}
-                                        disabled={decisioningId === approval.id}
+                                        disabled={decisioningId === approval.id || approval.status !== 'pending'}
                                     >
                                         {decisioningId === approval.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                                         Approve

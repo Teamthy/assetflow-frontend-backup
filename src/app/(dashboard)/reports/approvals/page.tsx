@@ -1,181 +1,123 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { Clock, CheckCircle2, XCircle, AlertCircle, ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, ShieldCheck, Clock, CheckCircle2, XCircle, Download } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { PageHeader } from '@/components/shared/PageHeader'
-import { assetApi } from '@/lib/api/assets'
-import { TreatmentBadge } from '@/components/shared/TreatmentBadge'
-import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { StatCard } from '@/components/shared/StatCard'
-import type { Asset, PaginatedResponse } from '@/types'
+import { Button } from '@/components/ui/button'
+import { usePendingApprovals } from '@/lib/hooks/useAdmin'
+import { formatDateTime } from '@/lib/utils/format'
+import { downloadTextFile, toCsv } from '@/lib/utils/download'
 
-export default function PendingApprovalsPage() {
-  const { data: pendingResp, isLoading } = useQuery<PaginatedResponse<Asset>>({
-    queryKey: ['assets', 'list', { accountingTreatment: 'pending_review' }],
-    queryFn: async () => {
-      const result = await assetApi.list({ accountingTreatment: 'pending_review', limit: 50 })
-      const data = result as Partial<PaginatedResponse<Asset>>
-      const items = Array.isArray(data.data) ? (data.data as Asset[]) : []
-      return {
-        data: items,
-        pagination: {
-          total: data.pagination?.total ?? items.length,
-          page: data.pagination?.page ?? 1,
-          limit: data.pagination?.limit ?? items.length,
-          totalPages: data.pagination?.totalPages ?? 1,
-        },
-      }
-    },
-  })
+export default function ApprovalsLogPage() {
+  const { data: approvals = [], isLoading, isError } = usePendingApprovals()
+  const [status, setStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [kind, setKind] = useState<'all' | 'disposal' | 'transfer'>('all')
 
-  const { data: disposedResp } = useQuery<PaginatedResponse<Asset>>({
-    queryKey: ['assets', 'list', { status: 'disposed' }],
-    queryFn: async () => {
-      const result = await assetApi.list({ status: 'disposed', limit: 10 })
-      const data = result as Partial<PaginatedResponse<Asset>>
-      const items = Array.isArray(data.data) ? (data.data as Asset[]) : []
-      return {
-        data: items,
-        pagination: {
-          total: data.pagination?.total ?? items.length,
-          page: data.pagination?.page ?? 1,
-          limit: data.pagination?.limit ?? items.length,
-          totalPages: data.pagination?.totalPages ?? 1,
-        },
-      }
-    },
-  })
+  const rows = useMemo(() => approvals.filter((item) => {
+    const type = item.requestType ?? item.type
+    if (status !== 'all' && item.status !== status) return false
+    if (kind !== 'all' && type !== kind) return false
+    return true
+  }), [approvals, status, kind])
 
-  const pendingList: Asset[] = pendingResp?.data ?? []
-  const pendingTotal = pendingResp?.pagination?.total ?? pendingList.length
-  const disposedTotal = disposedResp?.pagination?.total ?? 0
+  const pending = approvals.filter((item) => item.status === 'pending').length
+  const approved = approvals.filter((item) => item.status === 'approved').length
+  const rejected = approvals.filter((item) => item.status === 'rejected').length
+
+  function handleExport() {
+    downloadTextFile(
+      toCsv(rows.map((item) => ({
+        Asset: item.assetName ?? item.assetTag ?? '',
+        Type: item.requestType ?? item.type ?? '',
+        Status: item.status,
+        RequestedBy: item.requestedByName ?? '',
+        RequestedAt: item.requestedAt,
+        DecidedAt: item.decidedAt ?? '',
+        Note: item.decisionReason ?? '',
+      }))),
+      `approvals-${new Date().toISOString().slice(0, 10)}.csv`,
+    )
+    toast.success('Approvals log exported')
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <Link href="/reports" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 print:hidden">
+        <ArrowLeft className="w-4 h-4" />
+        Back to reports
+      </Link>
+
       <PageHeader
-        title="Pending Approvals"
-        subtitle="Assets and transactions requiring finance review"
-        breadcrumb={[
-          { label: 'Reports', href: '/reports' },
-          { label: 'Pending Approvals' },
-        ]}
+        title="Approvals log"
+        description="Pending and decided disposal and transfer requests"
+        actions={
+          <div className="flex gap-2 print:hidden">
+            <Link href="/approvals"><Button variant="outline">Decide requests</Button></Link>
+            <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          label="Pending Recognition"
-          value={pendingTotal}
-          icon={Clock}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
-        />
-        <StatCard
-          label="Disposed Assets"
-          value={disposedTotal}
-          icon={XCircle}
-          iconColor="text-red-600"
-          iconBg="bg-red-50"
-        />
-        <StatCard
-          label="Needs Review"
-          value={pendingTotal}
-          icon={AlertCircle}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-50"
-        />
+        <StatCard title="Pending" value={pending} icon={Clock} iconColor="text-amber-600" iconBg="bg-amber-50" href="/approvals" />
+        <StatCard title="Approved" value={approved} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+        <StatCard title="Rejected" value={rejected} icon={XCircle} iconColor="text-red-600" iconBg="bg-red-50" />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">
-            Recognition Queue
-          </h3>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Assets awaiting accounting treatment decision
-          </p>
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {(['all', 'pending', 'approved', 'rejected'] as const).map((item) => (
+          <button key={item} type="button" onClick={() => setStatus(item)} className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${status === item ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{item}</button>
+        ))}
+        <span className="mx-1 h-5 w-px bg-slate-200" />
+        {(['all', 'disposal', 'transfer'] as const).map((item) => (
+          <button key={item} type="button" onClick={() => setKind(item)} className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${kind === item ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>{item}</button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Loading approvals…</div>
+      ) : isError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">Could not load approvals.</div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+          <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+          No approvals in this view.
         </div>
-
-        {isLoading ? (
-          <div className="p-6 space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-14 bg-slate-100 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : pendingList.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <CheckCircle2 className="w-10 h-10 text-emerald-200 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-600 mb-1">
-              All caught up
-            </p>
-            <p className="text-sm text-slate-400">
-              No assets pending recognition review
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  {[
-                    'Asset',
-                    'Tag',
-                    'Purchase Cost',
-                    'Date Added',
-                    'Treatment',
-                    'Action',
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-3 whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Asset</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Requested</th>
+                <th className="px-4 py-3">Decided</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-4 py-3">
+                    <Link href={item.assetId ? `/assets/${item.assetId}` : '/approvals'} className="font-medium text-slate-900 hover:text-blue-600">
+                      {item.assetName ?? item.assetTag ?? 'Request'}
+                    </Link>
+                    <div className="text-xs text-slate-500">{item.requestedByName ?? '—'}</div>
+                  </td>
+                  <td className="px-4 py-3 capitalize">{item.requestType ?? item.type}</td>
+                  <td className="px-4 py-3 capitalize">{item.status}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatDateTime(item.requestedAt)}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatDateTime(item.decidedAt)}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {pendingList.map((asset) => (
-                  <tr
-                    key={asset.id}
-                    className="hover:bg-slate-50/70 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-slate-900">
-                        {asset.name}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {asset.category ?? 'Uncategorized'}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">
-                      {asset.assetTag}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                      {formatCurrency(asset.purchaseCost)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">
-                      {formatDate(asset.createdAt)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <TreatmentBadge treatment={asset.accountingTreatment} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/assets/${asset.id}?tab=financial`}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
-                      >
-                        Review{' '}
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

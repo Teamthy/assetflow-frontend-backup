@@ -9,6 +9,7 @@ import {
 import { toast } from 'sonner'
 import { assetApi } from '@/lib/api/assets'
 import { getApiErrorMessage } from '@/lib/api/errors'
+import { reportKeys } from '@/lib/hooks/useReports'
 import type {
   Asset,
   AssetListParams,
@@ -51,6 +52,7 @@ export function useAssets(
 
       return {
         data: data as Asset[],
+        items: data as Asset[],
         pagination,
       } as PaginatedResponse<Asset>
     },
@@ -112,6 +114,7 @@ export function useCreateAsset() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
       queryClient.invalidateQueries({ queryKey: assetKeys.audit() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset created successfully')
     },
     onError: (error: ApiError) => {
@@ -127,6 +130,7 @@ export function useUpdateAsset(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset updated successfully')
     },
     onError: (error: ApiError) => {
@@ -141,6 +145,7 @@ export function useDeleteAsset() {
     mutationFn: (id: string) => assetApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset deleted')
     },
     onError: (error: ApiError) => {
@@ -156,6 +161,7 @@ export function useRestoreAsset(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset restored successfully')
     },
     onError: (error: ApiError) => {
@@ -171,6 +177,7 @@ export function useTransferAsset(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset transferred successfully')
     },
     onError: (error: ApiError) => {
@@ -186,6 +193,7 @@ export function useDisposeAsset(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assetKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: assetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: reportKeys.all })
       toast.success('Asset disposed successfully')
     },
     onError: (error: ApiError) => {

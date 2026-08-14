@@ -8,6 +8,7 @@ import type {
 } from '@/lib/api/maintenance'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/api/errors'
+import { reportKeys } from '@/lib/hooks/useReports'
 
 export const maintenanceKeys = {
   all: ['maintenance'] as const,

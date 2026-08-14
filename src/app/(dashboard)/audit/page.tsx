@@ -54,6 +54,32 @@ export default function AuditCampaignsPage() {
         title="Physical audit"
         description="Physical count campaigns, exceptions, and sign-off"
       />
+      {!isLoading && items.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs text-slate-500">Campaigns</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{items.length}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs text-slate-500">Expected / missing</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {items.reduce((sum, row) => sum + Number(row.totalAssetsExpected ?? 0), 0)}
+              <span className="text-base font-normal text-slate-400"> / </span>
+              {items.reduce((sum, row) => sum + Number(row.totalMissing ?? 0), 0)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs text-slate-500">Exception rate</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {(() => {
+                const expected = items.reduce((sum, row) => sum + Number(row.totalAssetsExpected ?? 0), 0)
+                const missing = items.reduce((sum, row) => sum + Number(row.totalMissing ?? 0), 0)
+                return expected > 0 ? `${Math.round((missing / expected) * 100)}%` : '—'
+              })()}
+            </p>
+          </div>
+        </div>
+      )}
 
       <form
         className="space-y-3 rounded-xl border border-slate-200 bg-white p-5"

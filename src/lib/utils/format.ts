@@ -11,16 +11,18 @@ function safeParseISO(s: string | undefined | null): Date | null {
 }
 
 export function formatCurrency(
-  amount: number | undefined | null,
+  amount: number | string | undefined | null,
   currency = 'NGN'
 ): string {
-  if (amount == null) return '—'
+  if (amount == null || amount === '') return '—'
+  const numeric = typeof amount === 'number' ? amount : Number(amount)
+  if (!Number.isFinite(numeric)) return '—'
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(numeric)
 }
 
 export function formatNumber(value: number): string {
